@@ -1,0 +1,8 @@
+{
+  // Cloudflare Pages の設定ファイル。
+  // "public" フォルダの中身（index.html）を配信します。
+  // これにより、ローカルでも `npx wrangler pages deploy` を実行できます。
+  "name": "my-life-diary",
+  "compatibility_date": "2025-07-13",
+  "pages_build_output_dir": "public"
+}
