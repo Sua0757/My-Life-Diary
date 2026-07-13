@@ -28,7 +28,10 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # public フォルダを "my-life-diary" という名前の Pages プロジェクトとして公開。
-          # プロジェクトが存在しない場合は自動で作成されます。
+          # 先に "my-life-diary" という Pages プロジェクトを作成します。
+          # すでに存在する場合はエラーになりますが「|| true」で無視して次へ進みます。
+          preCommands: |
+            npx wrangler pages project create my-life-diary --production-branch=main || true
+          # public フォルダを "my-life-diary" プロジェクトとして公開。
           # --branch=main を付けることで本番URL( https://my-life-diary.pages.dev )として公開されます。
-          command: pages deploy public --project-name=my-life-diary --branch=main
+          command: pages deploy public --project-name=my-life-diary --branch=main --commit-dirty=true
