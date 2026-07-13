@@ -13,16 +13,18 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
-  --paper:#EEF2F9; --card:#FFFFFF; --ink:#131C2E; --sub:#64748B;
-  --line:#E4EBF4; --indigo:#4C6EF5; --indigo-deep:#2C6FBE; --indigo-ink:#3A4FC4; --indigo-bg:#EAF0FE;
-  --red:#E03131; --red-bg:#FDECEC; --amber:#B98116; --amber-bg:#FBF3E2;
-  --green:#20976A; --green-bg:#E7F6EF;
-  --radius:16px;
-  --grad:linear-gradient(135deg,#4C6EF5 0%,#3A4FC4 100%);
-  --grad-header:linear-gradient(120deg,#3A4FC4 0%,#4C6EF5 55%,#5B8DEF 100%);
-  --shadow:0 1px 2px rgba(24,40,80,.05), 0 6px 20px rgba(24,40,80,.05);
-  --shadow-lg:0 8px 30px rgba(24,40,80,.12);
-  --shadow-btn:0 4px 12px rgba(76,110,245,.28);
+  --paper:#F2F6FD; --card:#FFFFFF; --ink:#0F1A2C; --sub:#556277;
+  --line:#E3EAF4; --indigo:#5468FF; --indigo-deep:#3446D0; --indigo-ink:#2B3CC0; --indigo-bg:#EAEDFE;
+  --coral:#FF6B6B; --coral-bg:#FFECEC;
+  --red:#E5484D; --red-bg:#FDECEC; --amber:#C77D0A; --amber-bg:#FCF2DD;
+  --green:#12986A; --green-bg:#E4F6EE;
+  --radius:15px;
+  --grad:linear-gradient(135deg,#5468FF 0%,#7A5CFF 100%);
+  --grad-header:linear-gradient(115deg,#4A5EF5 0%,#7A5CFF 52%,#A46BF0 100%);
+  --grad-warm:linear-gradient(135deg,#FF8A5B 0%,#FF6B9D 100%);
+  --shadow:0 1px 2px rgba(30,40,90,.06), 0 6px 20px rgba(30,40,90,.06);
+  --shadow-lg:0 10px 32px rgba(40,45,120,.14);
+  --shadow-btn:0 5px 14px rgba(96,90,255,.30);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
@@ -33,15 +35,15 @@ body{
   background-attachment:fixed;
   color:var(--ink);
   font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
-  font-size:15px; line-height:1.6; letter-spacing:.01em;
-  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  font-size:15px; line-height:1.5; letter-spacing:.005em;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility;
   padding-bottom:calc(64px + env(safe-area-inset-bottom));
 }
 header.appbar{
   position:sticky; top:0; z-index:20; background:var(--grad-header); color:#fff;
-  padding:12px 18px calc(11px); display:flex; align-items:center; justify-content:space-between;
-  padding-top:calc(12px + env(safe-area-inset-top));
-  box-shadow:0 4px 18px rgba(44,79,196,.28); backdrop-filter:saturate(1.2);
+  padding:9px 16px 9px; display:flex; align-items:center; justify-content:space-between;
+  padding-top:calc(9px + env(safe-area-inset-top));
+  box-shadow:0 4px 18px rgba(96,80,220,.30); backdrop-filter:saturate(1.2);
 }
 header.appbar h1{font-size:16px; margin:0; letter-spacing:.1em; font-weight:800;}
 header.appbar .sub{font-size:11px; opacity:.8; letter-spacing:.06em;}
@@ -52,7 +54,7 @@ header.appbar .sub{font-size:11px; opacity:.8; letter-spacing:.06em;}
 .gear{background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:12px; padding:7px 10px; font-size:15px; cursor:pointer; transition:background .15s;}
 .gear:active{background:rgba(255,255,255,.28);}
 
-main{max-width:860px; margin:0 auto; padding:14px 14px 30px;}
+main{max-width:860px; margin:0 auto; padding:11px 13px 28px;}
 
 nav.tabbar{
   position:fixed; bottom:0; left:0; right:0; z-index:30;
@@ -63,20 +65,20 @@ nav.tabbar{
 }
 nav.tabbar{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 nav.tabbar button{
-  flex:1 0 13%; min-width:56px; border:none; background:none; padding:8px 1px 6px; cursor:pointer;
-  font-size:9.5px; color:var(--sub); display:flex; flex-direction:column; align-items:center; gap:3px;
+  flex:1 0 13%; min-width:56px; border:none; background:none; padding:7px 1px 5px; cursor:pointer;
+  font-size:10px; color:var(--sub); font-weight:600; display:flex; flex-direction:column; align-items:center; gap:2px;
   font-family:inherit; white-space:nowrap; position:relative; transition:color .15s;
 }
-nav.tabbar button .ico{font-size:17px; line-height:1; transition:transform .18s cubic-bezier(.34,1.56,.64,1);}
-nav.tabbar button.active{color:var(--indigo); font-weight:800;}
-nav.tabbar button.active .ico{transform:translateY(-2px) scale(1.12);}
+nav.tabbar button .ico{width:34px; height:27px; display:flex; align-items:center; justify-content:center; font-size:18px; line-height:1; border-radius:12px; transition:transform .2s cubic-bezier(.34,1.56,.64,1), background .2s;}
+nav.tabbar button.active{color:var(--indigo-ink); font-weight:800;}
+nav.tabbar button.active .ico{background:var(--indigo-bg); transform:translateY(-1px) scale(1.08);}
 nav.tabbar button.active::before{content:""; position:absolute; top:0; left:50%; transform:translateX(-50%); width:26px; height:3px; border-radius:0 0 4px 4px; background:var(--grad);}
 
-h2.page{font-size:19px; font-weight:800; margin:6px 0 14px; letter-spacing:.02em; display:flex; align-items:center; justify-content:space-between; gap:8px; position:relative; padding-left:13px;}
+h2.page{font-size:19px; font-weight:800; margin:4px 0 10px; letter-spacing:.02em; display:flex; align-items:center; justify-content:space-between; gap:8px; position:relative; padding-left:13px;}
 h2.page::before{content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width:5px; height:20px; border-radius:3px; background:var(--grad);}
 h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:0;}
 
-.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:15px 16px; margin-bottom:13px; position:relative; transition:box-shadow .18s ease, transform .18s ease;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 14px; margin-bottom:10px; position:relative; transition:box-shadow .18s ease, transform .18s ease;}
 .card-del{position:absolute; top:10px; right:10px; border:none; background:var(--red-bg); color:var(--red); border-radius:9px; width:34px; height:30px; font-size:14px; cursor:pointer; z-index:2; transition:background .15s;}
 .card-del:active{background:#F9D5D5;}
 .card .rec-title{padding-right:40px;}
@@ -84,7 +86,7 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .card.tap:hover{box-shadow:var(--shadow-lg); transform:translateY(-1px);}
 .card.tap:active{transform:translateY(0); box-shadow:var(--shadow);}
 
-.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:12px; padding:10px 17px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; letter-spacing:.03em; transition:transform .12s ease, box-shadow .15s ease, filter .15s ease;}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:12px; padding:9px 16px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; letter-spacing:.02em; transition:transform .12s ease, box-shadow .15s ease, filter .15s ease;}
 .btn:active{transform:translateY(1px);}
 .btn.primary{background:var(--grad); color:#fff; box-shadow:var(--shadow-btn);}
 .btn.primary:hover{filter:brightness(1.05);}
@@ -101,7 +103,7 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .seg button.on{background:#fff; color:var(--indigo-ink); box-shadow:0 2px 8px rgba(24,40,80,.12);}
 
 .month-head{
-  display:flex; align-items:center; gap:8px; margin:18px 0 8px; cursor:pointer; user-select:none;
+  display:flex; align-items:center; gap:8px; margin:14px 0 6px; cursor:pointer; user-select:none;
 }
 .month-head .tab{
   background:var(--grad); color:#fff; font-weight:800; font-size:13px;
@@ -126,7 +128,7 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .alert-banner li{margin-bottom:2px;}
 
 /* forms */
-.field{margin-bottom:13px;}
+.field{margin-bottom:10px;}
 .field>label{display:block; font-size:12px; font-weight:700; color:var(--indigo-deep); letter-spacing:.05em; margin-bottom:4px;}
 .field>label .auto{font-weight:400; color:var(--sub); font-size:11px;}
 input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
@@ -134,7 +136,7 @@ input[type=text],input[type=number],input[type=date],input[type=time],select,tex
   padding:10px 12px; font-size:15px; font-family:inherit; color:var(--ink);
   transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
-input:focus,select:focus,textarea:focus{outline:none; border-color:var(--indigo); background:#fff; box-shadow:0 0 0 3px rgba(76,110,245,.16);}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--indigo); background:#fff; box-shadow:0 0 0 3px rgba(84,104,255,.20);}
 textarea{resize:vertical; min-height:64px; line-height:1.7;}
 textarea.red, input.red{color:var(--red); font-weight:600;}
 .inline{display:flex; gap:8px; align-items:flex-start;}
@@ -147,7 +149,7 @@ textarea.red, input.red{color:var(--red); font-weight:600;}
 .opt-edit{flex:none; border:none; background:none; color:var(--indigo); font-size:11px; cursor:pointer; text-decoration:underline; padding:2px 4px; font-family:inherit;}
 
 .form-title{font-size:19px; font-weight:800; margin:2px 0 14px; line-height:1.4;}
-.section-label{font-size:13px; font-weight:800; color:#fff; background:var(--grad); display:inline-block; padding:4px 14px; border-radius:9px; margin:16px 0 10px; letter-spacing:.08em; box-shadow:0 3px 10px rgba(76,110,245,.25);}
+.section-label{font-size:13px; font-weight:800; color:#fff; background:var(--grad); display:inline-block; padding:4px 14px; border-radius:9px; margin:12px 0 8px; letter-spacing:.08em; box-shadow:0 3px 10px rgba(96,90,255,.28);}
 .section-label.red{background:linear-gradient(135deg,#F03E3E,#C92A2A); box-shadow:0 3px 10px rgba(224,49,49,.25);}
 
 /* schedule sheet */
@@ -294,13 +296,13 @@ table.mng.abdtbl td, table.mng.abdtbl th{white-space:normal;}
 </header>
 <main id="view"></main>
 <nav class="tabbar" id="tabbar">
-  <button data-tab="schedule"><span class="ico">📋</span>スケジュール</button>
-  <button data-tab="apo" class="active"><span class="ico">🗒</span>アポ記録</button>
-  <button data-tab="ref"><span class="ico">🤝</span>紹介者情報</button>
-  <button data-tab="manage"><span class="ico">📊</span>アポ管理</button>
-  <button data-tab="weekly"><span class="ico">🗓</span>週次振返り</button>
-  <button data-tab="mtg"><span class="ico">👥</span>個別MTG</button>
-  <button data-tab="goal"><span class="ico">🎯</span>目標</button>
+  <button data-tab="schedule"><span class="ico">☀️</span>スケジュール</button>
+  <button data-tab="apo" class="active"><span class="ico">✏️</span>アポ記録</button>
+  <button data-tab="ref"><span class="ico">🫶</span>紹介者情報</button>
+  <button data-tab="manage"><span class="ico">📈</span>アポ管理</button>
+  <button data-tab="weekly"><span class="ico">🗓️</span>週次振返り</button>
+  <button data-tab="mtg"><span class="ico">💬</span>個別MTG</button>
+  <button data-tab="goal"><span class="ico">⭐</span>目標</button>
 </nav>
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
