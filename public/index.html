@@ -1510,6 +1510,7 @@ function sheetView(date){
     F('３行日報（気付きなど）　→何をやったのか？結果は？結果の原因は？','<div class="voice-wrap"><textarea id="sh_di" class="red" oninput="setSheet(\''+date+'\',\'diary\',this.value)">'+esc(s.diary)+'</textarea>'+micBtn('sh_di')+'</div>')+
     (tpl.customFields||[]).map((cf,i)=>F(esc(cf),'<div class="voice-wrap"><textarea id="sh_cf'+i+'" oninput="setSheetCustom(\''+date+'\','+i+',this.value)">'+esc((s.custom||{})[cf]||'')+'</textarea>'+micBtn('sh_cf'+i)+'</div>')).join('')+
   '</div>'+
+  '<div class="btn-row"><button class="btn ghost block" onclick="subView={type:\'sheetA4\',date:\''+date+'\'};render();window.scrollTo(0,0)">🖨 A4サイズでプレビュー</button></div>'+
   '<div class="btn-row"><button class="btn ghost" style="flex:1" onclick="openTplEditor()">✎ シートのフォーマットをカスタム</button>'+
   '<button class="btn danger" onclick="deleteSheet(\''+date+'\')">削除</button></div>';
 }
