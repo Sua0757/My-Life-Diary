@@ -152,6 +152,16 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .due-val{font-weight:800; color:var(--indigo-ink); font-size:15px;}
 .due-hidden{position:absolute; opacity:0; width:1px; height:1px; padding:0; border:none; pointer-events:none;}
 
+/* 長期目標の折りたたみ（一文タップで期限・目標を編集） */
+.lg-head{display:flex; align-items:center; gap:10px; cursor:pointer; padding:2px 0; user-select:none;}
+.lg-line{flex:1; font-size:15px; font-weight:800; color:var(--indigo-ink); line-height:1.5;}
+.lg-arrow{flex:none; font-size:12px; font-weight:800; color:var(--indigo); white-space:nowrap;}
+
+/* スケジュールABCワンタップボタン */
+.abc-btns{flex:none; width:96px; display:flex; gap:3px;}
+.abc-b{flex:1; border:1.5px solid var(--line); background:#fff; border-radius:8px; padding:6px 0; font-size:13px; font-weight:800; color:var(--sub); cursor:pointer; font-family:inherit; transition:all .12s;}
+.abc-b.on{background:var(--indigo); border-color:var(--indigo); color:#fff;}
+
 .month-head{
   display:flex; align-items:center; gap:8px; margin:14px 0 6px; cursor:pointer; user-select:none;
 }
@@ -904,6 +914,7 @@ function setApoMonth(k){state.ui.apoMonth=k;save();render();window.scrollTo(0,0)
 function setSchedMonth(k){state.ui.schedMonth=k;save();render();window.scrollTo(0,0);}
 function setGoalYear(y){state.ui.goalYear=y;save();render();window.scrollTo(0,0);}
 function setGoalMonth(k){state.ui.goalMonth=k;save();render();window.scrollTo(0,0);}
+function setWeeklyMonth(k){state.ui.weeklyMonth=k;save();render();window.scrollTo(0,0);}
 /* 長期目標の期限：ボタンを押したときだけカレンダーを開く（今日が勝手に入らない） */
 function pickDue(id){const el=document.getElementById('due_'+id);if(!el)return;try{el.showPicker?el.showPicker():el.focus();}catch(e){el.focus();}}
 /* 紹介場所のワンタップ選択 */
@@ -1257,7 +1268,9 @@ function manageView(){
 function slashDate(d){if(!d)return '';const p=d.split('-');return p[0]+'/'+Number(p[1])+'/'+Number(p[2]);}
 function lgText(g){return (g.due?slashDate(g.due)+'までに':'')+(g.text||'');}
 function addLongGoal(){
-  state.longGoals.push({id:uid(),reviewDate:today(),due:'',text:'',createdAt:Date.now()});
+  const gid=uid();
+  state.longGoals.push({id:gid,reviewDate:today(),due:'',text:'',createdAt:Date.now()});
+  state.ui['lgo_'+gid]=true; /* 新規追加時は開いて編集できるように */
   save();render();
 }
 function setLG(id,f,v){
@@ -1270,6 +1283,9 @@ function delLG(id){askConfirm('この目標を削除しますか？',()=>{state.
 const MG_ROWS=[['r1','❶参画数 ※決めた人'],['r2','❷スキルシート回収数'],['r3','❸紹介数（直紹介）'],['r4','　紹介数（イベント）'],['r5','❹アポ数（初アポ）'],['r6','　アポ数（2回目以降）'],['r7','❺外部イベント参加数']];
 function addMonthlyGoal(){
   const rows={};MG_ROWS.forEach(([k])=>rows[k]={pg:'',pr:'',g:'',tp:''});
+  /* 直近の月の目標表から「今月の目標(g)」を新しい表の「先月の目標(pg)」へ、「今月の進捗(tp)」を「先月の結果(pr)」へ引き継ぐ */
+  const prev=state.monthlyGoals.slice().sort((a,b)=>(a.reviewDate||'').localeCompare(b.reviewDate||'')||a.createdAt-b.createdAt).pop();
+  if(prev&&prev.rows){MG_ROWS.forEach(([k])=>{const pr=prev.rows[k]||{};rows[k].pg=pr.g||'';rows[k].pr=pr.tp||'';});}
   state.monthlyGoals.push({id:uid(),reviewDate:today(),rows,reason:'',createdAt:Date.now()});
   save();render();
 }
@@ -1296,19 +1312,26 @@ function goalView(){
   const curYear=String(state.ui.goalYear||thisYear());
   const yearGoals=state.longGoals.filter(g=>lgYear(g)===curYear)
     .sort((a,b)=>(b.due||'0000-00-00').localeCompare(a.due||'0000-00-00')||b.createdAt-a.createdAt); /* 先の日付が上 */
-  const lgCard=g=>
-    '<div class="card">'+
-    '<div class="big-title-preview" style="font-size:16px" id="lgprev_'+g.id+'">'+esc(lgText(g)||'（期限と目標を入力すると、ここにつながって表示されます）')+'</div>'+
-    '<div class="field"><label>期限（この日までに）</label>'+
-      '<div class="due-row">'+
-        '<span class="due-val">'+(g.due?esc(slashDate(g.due)):'未設定')+'</span>'+
-        '<button type="button" class="btn subtle small" onclick="pickDue(\''+g.id+'\')">📅 カレンダーで選ぶ</button>'+
-        (g.due?'<button type="button" class="btn danger small" onclick="setLG(\''+g.id+'\',\'due\',\'\');render()">✕ クリア</button>':'')+
-        '<input type="date" id="due_'+g.id+'" value="'+esc(g.due)+'" class="due-hidden" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+
-      '</div></div>'+
-    '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'+
-    '<button class="btn danger small" onclick="delLG(\''+g.id+'\')">削除</button>'+
+  const lgCard=g=>{
+    const open=state.ui['lgo_'+g.id]===true;
+    return '<div class="card">'+
+    '<div class="lg-head" onclick="state.ui[\'lgo_'+g.id+'\']='+(open?'false':'true')+';save();render()">'+
+      '<span class="lg-line">'+esc(lgText(g)||'（未入力）タップで期限と目標を入力できます')+'</span>'+
+      '<span class="lg-arrow">'+(open?'▲ 閉じる':'▼ 編集')+'</span>'+
+    '</div>'+
+    (open?
+      '<div class="field" style="margin-top:10px"><label>期限（この日までに）</label>'+
+        '<div class="due-row">'+
+          '<span class="due-val">'+(g.due?esc(slashDate(g.due)):'未設定')+'</span>'+
+          '<button type="button" class="btn subtle small" onclick="pickDue(\''+g.id+'\')">📅 カレンダーで選ぶ</button>'+
+          (g.due?'<button type="button" class="btn danger small" onclick="setLG(\''+g.id+'\',\'due\',\'\');render()">✕ クリア</button>':'')+
+          '<input type="date" id="due_'+g.id+'" value="'+esc(g.due)+'" class="due-hidden" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+
+        '</div></div>'+
+      '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'+
+      '<button class="btn danger small" onclick="delLG(\''+g.id+'\')">削除</button>'
+    :'')+
     '</div>';
+  };
   const lgHtml=(state.longGoals.length?monthPickerHtmlYear(curYear,lgYears):'')+
     (yearGoals.length?yearGoals.map(lgCard).join('')
       :(state.longGoals.length?'<div class="empty">'+curYear+'年度の長期目標はありません。<br>上の📅で他の年度を選べます。</div>':'<div class="empty">「＋」で長期目標を追加できます。</div>'));
@@ -1371,6 +1394,16 @@ function setSheetChk(date,group,i,v){const s=ensureSheet(date);s[group][i]=v;sav
 function setSheetMetric(date,i,v){const s=ensureSheet(date);if(!s.metrics)s.metrics={};s.metrics[i]=v;save();}
 function setSheetMetricGoal(date,i,v){const s=ensureSheet(date);if(!s.metricGoals)s.metricGoals={};s.metricGoals[i]=v;if(!state.carry)state.carry={};if(!state.carry.metricGoals)state.carry.metricGoals={};state.carry.metricGoals[i]=v;save();}
 function setSheetABC(date,t,v){const s=ensureSheet(date);if(!s.slotABC)s.slotABC={};s.slotABC[t]=v;save();}
+/* スケジュールのABCをワンタップで選択（同じものを再度押すと解除） */
+function abcBtns(date,t,cur){
+  return '<div class="abc-btns">'+['A','B','C'].map(x=>'<button type="button" class="abc-b'+(cur===x?' on':'')+'" onclick="abcPick(\''+date+'\',\''+esc(t)+'\',\''+x+'\',this)">'+x+'</button>').join('')+'</div>';
+}
+function abcPick(date,t,v,btn){
+  const s=ensureSheet(date); const cur=(s.slotABC||{})[t]||'';
+  const next=(cur===v)?'':v;
+  setSheetABC(date,t,next);
+  btn.parentNode.querySelectorAll('.abc-b').forEach(b=>b.classList.toggle('on',next!==''&&b.textContent===next));
+}
 function toggleSlotStrike(date,t){
   const s=ensureSheet(date);
   if(!s.slotStrike)s.slotStrike={};
@@ -1405,7 +1438,7 @@ function scheduleListView(){
       return '<div class="card tap" onclick="openSheet(\''+d+'\')">'+
         '<div class="rec-title" style="font-size:15px">'+fmtDate(d)+'</div>'+
         '<div class="rec-sub">'+(s.todayGoal?'今日の目標：'+esc(s.todayGoal):'今日の目標：未記入')+'</div>'+
-        '<div class="rec-meta">'+(s.score!==''?'<span class="chip blue">達成度 '+esc(s.score)+'/100</span>':'')+
+        '<div class="rec-meta">'+(s.ach10?'<span class="chip blue">達成度 '+esc(s.ach10)+'/10</span>':'')+
         '<span class="chip">ToDo '+done1+'/'+state.scheduleTemplate.todo1.length+'</span>'+
         '</div></div>';
     }).join(''):'<div class="empty">'+(allKeys.length?monthLabel(cur)+'のシートはありません。<br>上の📅で他の月を選べます。':'まだシートがありません。<br>「今日のシートを開く」から始めましょう。')+'</div>');
@@ -1445,8 +1478,8 @@ function sheetView(date){
     F('始業時間',timeSel(date,'startW',s.startW))+
     F('終業時間',timeSel(date,'endW',s.endW))+'</div>'+
     '<p class="hint">分は00・15・30・45から選べます。始業時間・終業時間と「今月の数字」の目標欄は、変更しない限り翌日以降のシートにも自動で引き継がれます。</p>'+
-    '<div class="slot-row" style="border-bottom:none"><span class="t"></span><span style="flex:1;font-size:11px;font-weight:700;color:var(--indigo-deep)">予定</span><span style="flex:1;font-size:11px;font-weight:700;color:var(--red)">変更</span><span style="flex:none;width:54px;text-align:center;font-size:11px;font-weight:700;color:var(--red)">ABC</span></div>'+
-    tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><input type="text" class="'+((s.slotStrike||{})[t]?'strike':'')+'" value="'+esc(s.slots[t]||'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" ondblclick="toggleSlotStrike(\''+date+'\',\''+esc(t)+'\')" onmousedown="if(event.detail>1)event.preventDefault()"><input type="text" class="slot-red" value="'+esc((s.slotsRed||{})[t]||'')+'" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)"><select class="abc-sel" onchange="setSheetABC(\''+date+'\',\''+esc(t)+'\',this.value)"><option value=""></option>'+['A','B','C'].map(x=>'<option value="'+x+'"'+((abc[t]||'')===x?' selected':'')+'>'+x+'</option>').join('')+'</select></div>').join('')+
+    '<div class="slot-row" style="border-bottom:none"><span class="t"></span><span style="flex:1;font-size:11px;font-weight:700;color:var(--indigo-deep)">予定</span><span style="flex:1;font-size:11px;font-weight:700;color:var(--red)">変更</span><span style="flex:none;width:96px;text-align:center;font-size:11px;font-weight:700;color:var(--red)">ABC</span></div>'+
+    tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><input type="text" class="'+((s.slotStrike||{})[t]?'strike':'')+'" value="'+esc(s.slots[t]||'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" ondblclick="toggleSlotStrike(\''+date+'\',\''+esc(t)+'\')" onmousedown="if(event.detail>1)event.preventDefault()"><input type="text" class="slot-red" value="'+esc((s.slotsRed||{})[t]||'')+'" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)">'+abcBtns(date,t,abc[t]||'')+'</div>').join('')+
     '<p class="hint" style="margin-top:6px">右の赤い欄には、振り返りで予定変更があった場合の実際の行動を記入します。</p>'+
     '<p class="hint" style="margin-top:8px">① 今日やるタスク全てに番号を振る ② 番号を元にスケジュールに記載 ③ 1日の最後に実際の行動を記入 ④ 各行動にABCを付ける<br>（A：目標に繋がる／B：繋がらない／C：繋がらないが生活に必要）</p>'+
   '</div>'+
@@ -1460,7 +1493,7 @@ function sheetView(date){
     '<div style="overflow-x:auto"><table class="goal"><tr><th style="min-width:150px"></th><th style="width:72px">目標</th><th style="width:72px">結果</th></tr>'+
     tpl.metrics.map((m,i)=>'<tr><td>'+esc(m)+'</td>'+
       '<td><input type="text" inputmode="numeric" value="'+esc(mgoals[i]||'')+'" oninput="setSheetMetricGoal(\''+date+'\','+i+',this.value)"></td>'+
-      '<td><input type="text" inputmode="numeric" value="'+esc(s.metrics[i]||'')+'" oninput="setSheetMetric(\''+date+'\','+i+',this.value)"></td>'+
+      '<td><input type="text" class="red" inputmode="numeric" value="'+esc(s.metrics[i]||'')+'" oninput="setSheetMetric(\''+date+'\','+i+',this.value)"></td>'+
       '</tr>').join('')+'</table></div>'+
   '</div>'+
   '<div class="card"><div class="section-label" style="margin-top:0">イベント参加した日の振返り</div>'+
@@ -1472,8 +1505,7 @@ function sheetView(date){
   '<div class="card"><div class="section-label" style="margin-top:0">1日の振り返り</div>'+
     F('朝の気分（1〜10）',scaleBtns(date,'mood',10,s.mood))+
     F('今日の達成度（1〜10）',scaleBtns(date,'ach10',10,s.ach10))+
-    F('今日の達成度（100点満点）','<input type="number" inputmode="numeric" value="'+esc(s.score)+'" oninput="setSheet(\''+date+'\',\'score\',this.value)">')+
-    F('点数の結果の原因（端的に言語化）','<div class="voice-wrap"><textarea id="sh_why" oninput="setSheet(\''+date+'\',\'scoreWhy\',this.value)">'+esc(s.scoreWhy)+'</textarea>'+micBtn('sh_why')+'</div>')+
+    F('達成度の結果の原因（端的に言語化）','<div class="voice-wrap"><textarea id="sh_why" oninput="setSheet(\''+date+'\',\'scoreWhy\',this.value)">'+esc(s.scoreWhy)+'</textarea>'+micBtn('sh_why')+'</div>')+
     F(esc(tpl.apoListTitle||'今日のアポした人リスト（箇条書き）'),'<div class="voice-wrap"><textarea id="sh_apo" oninput="setSheet(\''+date+'\',\'apoList\',this.value)">'+esc(s.apoList)+'</textarea>'+micBtn('sh_apo')+'</div>')+
     F('３行日報（気付きなど）　→何をやったのか？結果は？結果の原因は？','<div class="voice-wrap"><textarea id="sh_di" class="red" oninput="setSheet(\''+date+'\',\'diary\',this.value)">'+esc(s.diary)+'</textarea>'+micBtn('sh_di')+'</div>')+
     (tpl.customFields||[]).map((cf,i)=>F(esc(cf),'<div class="voice-wrap"><textarea id="sh_cf'+i+'" oninput="setSheetCustom(\''+date+'\','+i+',this.value)">'+esc((s.custom||{})[cf]||'')+'</textarea>'+micBtn('sh_cf'+i)+'</div>')).join('')+
@@ -1514,8 +1546,7 @@ function a4View(date){
         '<h5>1日の振り返り</h5>'+
         '<div style="font-size:10.5px">朝の気分　　：'+circ(s.mood)+'</div>'+
         '<div style="font-size:10.5px">今日の達成度：'+circ(s.ach10)+'</div>'+
-        '<div style="margin-top:4px"><b>今日の達成度：</b>'+esc(s.score||'　　')+' ／100点満点</div>'+
-        (s.scoreWhy?'<div class="pre" style="font-size:10.5px">原因：'+esc(s.scoreWhy)+'</div>':'')+
+        (s.scoreWhy?'<div class="pre" style="font-size:10.5px">達成度の結果の原因：'+esc(s.scoreWhy)+'</div>':'')+
         '<div style="margin-top:4px"><b>《'+esc(tpl.apoListTitle||'今日のアポした人リスト')+'》</b><div class="pre">'+esc(s.apoList||'')+'</div></div>'+
         '<div style="margin-top:4px"><b>《３行日報 気付きなども》</b><div class="redtxt">'+esc(s.diary||'')+'</div></div>'+
         (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><b>《'+esc(cf)+'》</b><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
@@ -1714,10 +1745,13 @@ function weeklyPreviewText(id){
   return L.join('\n');
 }
 function weeklyListView(){
-  const list=state.weeklyReviews.slice().sort((a,b)=>(b.periodStart||'').localeCompare(a.periodStart||'')||b.createdAt-a.createdAt); /* 新しい期間が上 */
-  return '<h2 class="page">週次振り返り <small>全'+list.length+'件</small></h2>'+
+  const all=state.weeklyReviews.slice().sort((a,b)=>(b.periodStart||'').localeCompare(a.periodStart||'')||b.createdAt-a.createdAt); /* 新しい期間が上 */
+  const months=all.map(w=>monthKey(w.periodStart));
+  const cur=state.ui.weeklyMonth||thisMonthKey();
+  const list=all.filter(w=>monthKey(w.periodStart)===cur);
+  return '<h2 class="page">週次振り返り <small>全'+all.length+'件</small></h2>'+
     '<div class="btn-row"><button class="btn primary block" onclick="addWeekly()">＋ 今週の振り返りを追加</button></div>'+
-    '<p class="hint" style="margin-bottom:8px">新しい期間が上に表示されます。</p>'+
+    (all.length?monthPickerHtml(cur,months,'setWeeklyMonth'):'')+
     (list.length?list.map(w=>{
       const r=(w.review||'').replace(/\s+/g,' ').trim();
       return '<div class="card tap" onclick="subView={type:\'weeklyForm\',id:\''+w.id+'\'};render();window.scrollTo(0,0)">'+
@@ -1725,7 +1759,7 @@ function weeklyListView(){
         '<div class="rec-title" style="font-size:15px">'+(w.periodStart?fmtDate(w.periodStart):'未定')+'　～　'+(w.periodEnd?fmtDate(w.periodEnd):'未定')+'</div>'+
         (r?'<div class="rec-sub">'+esc(r.length>60?r.slice(0,60)+'…':r)+'</div>':'')+
         '</div>';
-    }).join(''):'<div class="empty">まだ週次振り返りがありません。<br>「＋」で今週分を作成しましょう。</div>');
+    }).join(''):'<div class="empty">'+(all.length?monthLabel(cur)+'の週次振り返りはありません。<br>上の📅で他の月を選べます。':'まだ週次振り返りがありません。<br>「＋」で今週分を作成しましょう。')+'</div>');
 }
 function weeklyFormView(id){
   const w=state.weeklyReviews.find(x=>x.id===id); if(!w)return '<div class="empty">見つかりません</div>';
@@ -1818,11 +1852,15 @@ function abdGroupsHtml(recId,list,listField){
 function addMtg(){
   const list=state.mtgs.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const prev=list[list.length-1];
+  const curAbd=abdSnapshot();
+  const curNames=new Set(curAbd.map(p=>p.name).filter(Boolean));
+  /* 前回のToDo：今もアポ管理でABDの同一人物のみ、前回の自由記入欄の内容を引き継ぐ */
+  const prevTodo=prev?JSON.parse(JSON.stringify((prev.abdList||[]).filter(p=>p.name&&curNames.has(p.name)))):[];
   const m={
     id:uid(), createdAt:Date.now(),
     date:today(), nextDate:'',
-    prevTodo: prev?JSON.parse(JSON.stringify(prev.abdList||[])):[],
-    abdList: abdSnapshot(),
+    prevTodo: prevTodo,
+    abdList: curAbd,
     longGoalText: lgSummaryLines().join(String.fromCharCode(10)),
     mgMonthKey: monthKey(today()),
     nextTodo:''
