@@ -334,7 +334,7 @@ body.a4-mode .a4{border:none; box-shadow:none;}
   header.appbar,nav.tabbar,.no-print,.toast,#shareBanner{display:none!important;}
   body{background:#fff;padding:0;margin:0;}
   main{max-width:none;padding:0;margin:0;}
-  #a4wrap{height:auto!important;overflow:visible;}
+  #a4wrap{height:auto!important;width:auto!important;margin:0!important;overflow:visible;}
   .a4{transform:none!important;border:none;box-shadow:none;width:100%;min-height:297mm;padding:12mm;margin:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   @page{size:A4;margin:0;}
 }
@@ -1701,9 +1701,23 @@ function a4View(date){
 function fitA4(){
   const w=document.getElementById('a4wrap'), p=document.getElementById('a4paper');
   if(!w||!p)return;
-  const sc=Math.min(1, w.clientWidth/794);
-  p.style.transform='scale('+sc+')';
-  w.style.height=(p.offsetHeight*sc+12)+'px';
+  const natH=p.offsetHeight||1123;
+  const availW=(w.parentElement||document.body).clientWidth;
+  if(isPhone()){
+    /* スマホ：横幅いっぱい（縦はスクロール） */
+    w.style.width=''; w.style.margin='';
+    const sc=Math.min(1, availW/794);
+    p.style.transform='scale('+sc+')';
+    w.style.height=(natH*sc+8)+'px';
+  }else{
+    /* PC：横も縦も画面に収める（スクロール不要）＆中央寄せ */
+    const availH=Math.max(240, window.innerHeight-72);
+    const sc=Math.min(availW/794, availH/natH, 1);
+    p.style.transform='scale('+sc+')';
+    w.style.width=(794*sc)+'px';
+    w.style.margin='0 auto';
+    w.style.height=(natH*sc)+'px';
+  }
 }
 /* 現在のプレビュー画面をそのまま印刷（スマホでも確実に動くように）。
    印刷用CSS(@media print)でアプリのUIを隠し、A4シートだけを用紙いっぱいに出す。 */
