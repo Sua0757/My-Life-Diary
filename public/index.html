@@ -326,12 +326,12 @@ body.a4-mode header.appbar, body.a4-mode nav.tabbar{display:none!important;}
 body.a4-mode main{padding:12px 13px 28px;}
 body.a4-mode .back{top:8px;}
 @media print{
-  header.appbar,nav.tabbar,.no-print,.toast{display:none!important;}
-  body{background:#fff;padding:0;}
+  header.appbar,nav.tabbar,.no-print,.toast,#shareBanner{display:none!important;}
+  body{background:#fff;padding:0;margin:0;}
   main{max-width:none;padding:0;margin:0;}
   #a4wrap{height:auto!important;overflow:visible;}
-  .a4{transform:none!important;border:none;box-shadow:none;width:auto;min-height:auto;padding:0;}
-  @page{size:A4;margin:10mm;}
+  .a4{transform:none!important;border:none;box-shadow:none;width:100%;min-height:297mm;padding:12mm;margin:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @page{size:A4;margin:0;}
 }
 
 .person-card{background:var(--soft3); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; position:relative;}
@@ -1653,27 +1653,10 @@ function fitA4(){
   p.style.transform='scale('+sc+')';
   w.style.height=(p.offsetHeight*sc+12)+'px';
 }
-/* 内容だけを別ウィンドウに出して印刷（スタンドアロンPWA/アプリ内ブラウザでも動くように） */
+/* 現在のプレビュー画面をそのまま印刷（スマホでも確実に動くように）。
+   印刷用CSS(@media print)でアプリのUIを隠し、A4シートだけを用紙いっぱいに出す。 */
 function printA4(){
-  const paper=document.getElementById('a4paper');
-  if(!paper){window.print();return;}
-  const css=Array.from(document.querySelectorAll('style')).map(s=>s.textContent).join('\n');
-  const win=window.open('','_blank');
-  if(!win){ /* ポップアップがブロックされた場合は従来方式 */ window.print(); return; }
-  const doc='<!doctype html><html lang="ja"><head><meta charset="utf-8">'+
-    '<meta name="viewport" content="width=device-width, initial-scale=1">'+
-    '<title>スケジュールシート</title><style>'+css+'</style>'+
-    '<style>body{background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
-    '#pw{overflow:visible;}#pw .a4{transform:none!important;border:none;box-shadow:none;width:210mm;min-height:297mm;padding:12mm;margin:0 auto;box-sizing:border-box;}'+
-    '@page{size:A4;margin:0;}'+
-    '.pbar{position:sticky;top:0;display:flex;gap:8px;padding:10px;background:#fff;border-bottom:1px solid #ddd;font-family:sans-serif;}'+
-    '.pbar button{flex:1;padding:11px;font-size:15px;font-weight:700;border:none;border-radius:10px;background:#F26A2E;color:#fff;}'+
-    '@media print{.pbar{display:none!important;}}</style></head><body>'+
-    '<div class="pbar"><button onclick="window.print()">🖨 印刷・PDFに保存</button><button onclick="window.close()" style="background:#eee;color:#333">閉じる</button></div>'+
-    '<div id="pw"><div class="a4">'+paper.innerHTML+'</div></div>'+
-    '<script>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},350);};<\/script>'+
-    '</body></html>';
-  win.document.open(); win.document.write(doc); win.document.close();
+  try{ window.print(); }catch(e){ toast('印刷を開けませんでした。ブラウザのメニューから印刷をお試しください。'); }
 }
 window.addEventListener('resize',()=>{if(subView&&subView.type==='sheetA4')fitA4();});
 /* シートのフォーマット編集 */
