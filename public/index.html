@@ -636,12 +636,19 @@ document.addEventListener('keydown',e=>{
     const col=Array.from(document.querySelectorAll(isRed?'.slot-row input.slot-red':'.slot-row input:not(.slot-red)'));
     const i=col.indexOf(el); if(i>=0&&i<col.length-1)next=col[i+1];
   }else{
-    /* 表：同じ列（セル位置）の下の行の入力欄へ */
     const cell=el.closest('td'), row=el.closest('tr');
     if(cell&&row){
-      const ci=Array.from(row.children).indexOf(cell);
-      let r=row.nextElementSibling;
-      while(r&&!next){ const c=r.children[ci]; const ni=c&&c.querySelector('input:not([type=checkbox])'); if(ni)next=ni; r=r.nextElementSibling; }
+      const dataRows=Array.from(tbl.querySelectorAll('tr')).filter(r=>r.querySelector('input'));
+      if(dataRows.length<=1){
+        /* 横1行の表（週次の❶②⑤など）：右のマスへ */
+        let c=cell.nextElementSibling;
+        while(c&&!next){ const ni=c.querySelector('input:not([type=checkbox])'); if(ni)next=ni; c=c.nextElementSibling; }
+      }else{
+        /* 複数行の表：同じ列の下の行の入力欄へ */
+        const ci=Array.from(row.children).indexOf(cell);
+        let r=row.nextElementSibling;
+        while(r&&!next){ const c=r.children[ci]; const ni=c&&c.querySelector('input:not([type=checkbox])'); if(ni)next=ni; r=r.nextElementSibling; }
+      }
     }
   }
   if(next){next.focus();try{next.select();}catch(_){}}
