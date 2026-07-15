@@ -620,25 +620,31 @@ function toggleVoice(btn,targetId){
 function autoGrow(el){el.style.height='auto';el.style.height=(el.scrollHeight+2)+'px';}
 function growAll(){document.querySelectorAll('textarea').forEach(t=>{t.style.overflow='hidden';autoGrow(t);});}
 document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA')autoGrow(e.target);});
-/* エンターで次の入力欄へ移動（スケジュールの予定・変更／目標などの数字表） */
+/* エンターで「同じ列の下の欄」へ移動（スケジュールの予定・変更／各数字表） */
 document.addEventListener('keydown',e=>{
   if(e.key!=='Enter'||e.isComposing)return; /* 日本語変換中は無視 */
   const el=e.target;
   if(!el||el.tagName!=='INPUT')return;
   const slot=el.closest('.slot-row');
-  const goalTbl=el.closest('table.goal');
-  if(!slot&&!goalTbl)return;
+  const tbl=el.closest('table.goal');
+  if(!slot&&!tbl)return;
   e.preventDefault();
-  let list;
+  let next=null;
   if(slot){
-    /* 予定は予定の列を、変更は変更の列を、それぞれ下の行へ移動 */
+    /* 予定は予定の列、変更は変更の列を、それぞれ下の行へ */
     const isRed=el.classList.contains('slot-red');
-    list=Array.from(document.querySelectorAll(isRed?'.slot-row input.slot-red':'.slot-row input:not(.slot-red)'));
+    const col=Array.from(document.querySelectorAll(isRed?'.slot-row input.slot-red':'.slot-row input:not(.slot-red)'));
+    const i=col.indexOf(el); if(i>=0&&i<col.length-1)next=col[i+1];
   }else{
-    list=Array.from(goalTbl.querySelectorAll('input:not([type=checkbox])'));
+    /* 表：同じ列（セル位置）の下の行の入力欄へ */
+    const cell=el.closest('td'), row=el.closest('tr');
+    if(cell&&row){
+      const ci=Array.from(row.children).indexOf(cell);
+      let r=row.nextElementSibling;
+      while(r&&!next){ const c=r.children[ci]; const ni=c&&c.querySelector('input:not([type=checkbox])'); if(ni)next=ni; r=r.nextElementSibling; }
+    }
   }
-  const i=list.indexOf(el);
-  if(i>=0&&i<list.length-1){const n=list[i+1];n.focus();try{n.select();}catch(_){}}
+  if(next){next.focus();try{next.select();}catch(_){}}
   else el.blur();
 });
 
