@@ -1013,6 +1013,20 @@ function dueClear(id){
   if(state.ui)delete state.ui['dueParts_'+id];
   save();render();
 }
+/* スマホ（タッチ＆小画面）か判定：スマホはドロップダウン、PCはカレンダー入力 */
+function isPhone(){
+  const touch=(navigator.maxTouchPoints>0)||('ontouchstart' in window);
+  return touch && Math.min(window.innerWidth,window.innerHeight)<=820;
+}
+function dueFieldHtml(g){
+  const clearBtn=g.due?'<button type="button" class="btn danger small" onclick="dueClear(\''+g.id+'\')">✕ クリア</button>':'';
+  if(isPhone()){
+    return '<div class="due-row">'+dueSelectsHtml(g)+clearBtn+'</div>'+
+      '<p class="hint" style="margin-top:4px">年・月・日を選ぶと期限が決まります（3つとも選ぶまで空欄のまま）。勝手に今日の日付にはなりません。</p>';
+  }
+  return '<div class="due-row"><input type="date" class="due-input" value="'+esc(g.due)+'" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+clearBtn+'</div>'+
+    '<p class="hint" style="margin-top:4px">日付の欄をクリックするとカレンダーが開きます。空欄のままにもできます。</p>';
+}
 function setApoMonth(k){state.ui.apoMonth=k;save();render();window.scrollTo(0,0);}
 function setSchedMonth(k){state.ui.schedMonth=k;save();render();window.scrollTo(0,0);}
 function setGoalYear(y){state.ui.goalYear=y;save();render();window.scrollTo(0,0);}
@@ -1432,10 +1446,7 @@ function goalView(){
     '</div>'+
     (open?
       '<div class="field" style="margin-top:10px"><label>期限（この日までに）</label>'+
-        '<div class="due-row">'+dueSelectsHtml(g)+
-          (g.due?'<button type="button" class="btn danger small" onclick="dueClear(\''+g.id+'\')">✕ クリア</button>':'')+
-        '</div>'+
-        '<p class="hint" style="margin-top:4px">年・月・日を選ぶと期限が決まります（3つとも選ぶまで空欄のままです）。勝手に今日の日付にはなりません。</p></div>'+
+        dueFieldHtml(g)+'</div>'+
       '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'
     :'')+
     '</div>';
