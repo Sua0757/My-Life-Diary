@@ -1896,6 +1896,9 @@ function addMtg(){
   const curNames=new Set(curAbd.map(p=>p.name).filter(Boolean));
   /* 前回のToDo：今もアポ管理でABDの同一人物のみ、前回の自由記入欄の内容を引き継ぐ */
   const prevTodo=prev?JSON.parse(JSON.stringify((prev.abdList||[]).filter(p=>p.name&&curNames.has(p.name)))):[];
+  /* 前回のToDoの自由記入欄の内容を、ABDの人を箇条書きへの自由記入欄にも反映（同一人物ごと） */
+  const todoMemo=memoMapFromList(prevTodo);
+  curAbd.forEach(p=>{if(p.name&&todoMemo[p.name])p.memo=todoMemo[p.name];});
   const m={
     id:uid(), createdAt:Date.now(),
     date:today(), nextDate:'',
@@ -1910,7 +1913,14 @@ function addMtg(){
 }
 function setMtg(id,field,value){const m=state.mtgs.find(x=>x.id===id); if(m){m[field]=value; save();}}
 function deleteMtg(id){askConfirm('このMTG記録を削除しますか？',()=>{state.mtgs=state.mtgs.filter(x=>x.id!==id);save();subView=null;render();});}
-function refreshAbdFromManage(id){const m=state.mtgs.find(x=>x.id===id); if(!m)return; m.abdList=abdSnapshot(); save(); render(); toast('アポ管理のA・B・Dの人で更新しました');}
+function memoMapFromList(list){const mp={};(list||[]).forEach(p=>{if(p.name&&p.memo)mp[p.name]=p.memo;});return mp;}
+function refreshAbdFromManage(id){
+  const m=state.mtgs.find(x=>x.id===id); if(!m)return;
+  const keepMemo=memoMapFromList(m.abdList); /* すでに書いた自由記入欄は残す */
+  const todoMemo=memoMapFromList(m.prevTodo); /* 無ければ前回のToDoの内容を反映 */
+  m.abdList=abdSnapshot().map(p=>{p.memo=p.name?(keepMemo[p.name]||todoMemo[p.name]||''):''; return p;});
+  save(); render(); toast('アポ管理のA・B・Dの人で更新しました');
+}
 function mtgListView(){
   const list=state.mtgs.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.createdAt-b.createdAt);
   const groups={};
