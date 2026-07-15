@@ -1694,9 +1694,7 @@ function a4View(date){
         (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><h5>'+esc(cf)+'</h5><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
       '</div>'+
     '</div>'+
-  '</div></div>'+
-  '<div class="btn-row no-print" style="margin-top:12px"><button class="btn primary block" onclick="printA4()">🖨 印刷・PDFに保存</button></div>'+
-  '<p class="hint no-print">ボタンを押すと内容だけの印刷画面が開きます。そこで「PDFに保存」を選ぶとA4のPDFになります。</p>';
+  '</div></div>';
 }
 function fitA4(){
   const w=document.getElementById('a4wrap'), p=document.getElementById('a4paper');
