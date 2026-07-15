@@ -152,6 +152,7 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .due-val{font-weight:800; color:var(--indigo-ink); font-size:15px;}
 .due-hidden{position:absolute; opacity:0; width:1px; height:1px; padding:0; border:none; pointer-events:none;}
 .due-input{max-width:200px; font-weight:700;}
+.due-sel{width:auto; flex:0 1 auto; padding:9px 30px 9px 12px; font-weight:700; font-size:15px;}
 
 /* 長期目標の折りたたみ（一文タップで期限・目標を編集） */
 .lg-head{display:flex; align-items:center; gap:10px; cursor:pointer; padding:2px 0; user-select:none;}
@@ -983,6 +984,35 @@ function yearPickerHtml(curYear,years,fnName){
   const opts=arr.map(y=>'<option value="'+y+'"'+(y===String(curYear)?' selected':'')+'>'+y+'年度</option>').join('');
   return '<div class="month-nav"><span class="mn-ico">📅</span><select onchange="'+fnName+'(this.value)">'+opts+'</select></div>';
 }
+/* 長期目標の期限：年・月・日をドロップダウンで選ぶ（iOSのカレンダーが勝手に今日になる問題を回避） */
+function duePartsOf(id){
+  const g=state.longGoals.find(x=>x.id===id)||{};
+  const t=state.ui&&state.ui['dueParts_'+id];
+  if(t)return {y:t.y||'',m:t.m||'',d:t.d||''};
+  if(g.due){const p=String(g.due).split('-');return {y:p[0]||'',m:p[1]?String(+p[1]):'',d:p[2]?String(+p[2]):''};}
+  return {y:'',m:'',d:''};
+}
+function dueSelectsHtml(g){
+  const cur=duePartsOf(g.id), ty=thisYear();
+  let y='<option value="">年</option>'; for(let v=ty;v<=ty+10;v++)y+='<option value="'+v+'"'+(String(v)===String(cur.y)?' selected':'')+'>'+v+'年</option>';
+  let m='<option value="">月</option>'; for(let v=1;v<=12;v++)m+='<option value="'+v+'"'+(String(v)===String(cur.m)?' selected':'')+'>'+v+'月</option>';
+  let d='<option value="">日</option>'; for(let v=1;v<=31;v++)d+='<option value="'+v+'"'+(String(v)===String(cur.d)?' selected':'')+'>'+v+'日</option>';
+  return '<select class="due-sel" onchange="setDuePart(\''+g.id+'\',\'y\',this.value)">'+y+'</select>'+
+         '<select class="due-sel" onchange="setDuePart(\''+g.id+'\',\'m\',this.value)">'+m+'</select>'+
+         '<select class="due-sel" onchange="setDuePart(\''+g.id+'\',\'d\',this.value)">'+d+'</select>';
+}
+function setDuePart(id,part,val){
+  const g=state.longGoals.find(x=>x.id===id); if(!g)return;
+  const cur=duePartsOf(id); cur[part]=val;
+  if(!state.ui)state.ui={}; state.ui['dueParts_'+id]=cur;
+  g.due=(cur.y&&cur.m&&cur.d)?(cur.y+'-'+String(cur.m).padStart(2,'0')+'-'+String(cur.d).padStart(2,'0')):'';
+  save();render();
+}
+function dueClear(id){
+  const g=state.longGoals.find(x=>x.id===id); if(g)g.due='';
+  if(state.ui)delete state.ui['dueParts_'+id];
+  save();render();
+}
 function setApoMonth(k){state.ui.apoMonth=k;save();render();window.scrollTo(0,0);}
 function setSchedMonth(k){state.ui.schedMonth=k;save();render();window.scrollTo(0,0);}
 function setGoalYear(y){state.ui.goalYear=y;save();render();window.scrollTo(0,0);}
@@ -1402,11 +1432,10 @@ function goalView(){
     '</div>'+
     (open?
       '<div class="field" style="margin-top:10px"><label>期限（この日までに）</label>'+
-        '<div class="due-row">'+
-          '<input type="date" id="due_'+g.id+'" class="due-input" value="'+esc(g.due)+'" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+
-          (g.due?'<button type="button" class="btn danger small" onclick="setLG(\''+g.id+'\',\'due\',\'\');render()">✕ クリア</button>':'')+
+        '<div class="due-row">'+dueSelectsHtml(g)+
+          (g.due?'<button type="button" class="btn danger small" onclick="dueClear(\''+g.id+'\')">✕ クリア</button>':'')+
         '</div>'+
-        '<p class="hint" style="margin-top:4px">日付の欄をタップするとカレンダーが開きます。空欄のままにもできます。</p></div>'+
+        '<p class="hint" style="margin-top:4px">年・月・日を選ぶと期限が決まります（3つとも選ぶまで空欄のままです）。勝手に今日の日付にはなりません。</p></div>'+
       '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'
     :'')+
     '</div>';
