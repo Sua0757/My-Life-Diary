@@ -261,7 +261,8 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .hint{font-size:11.5px; color:var(--sub); line-height:1.6;}
 .toast{position:fixed; bottom:calc(76px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:9px 18px; border-radius:999px; font-size:13px; z-index:60; box-shadow:0 4px 14px rgba(0,0,0,.25); opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap;}
 .toast.show{opacity:1;}
-.back{background:none; border:none; color:var(--indigo-deep); font-size:14px; font-weight:700; cursor:pointer; padding:4px 0; margin-bottom:8px; font-family:inherit;}
+.back{position:sticky; top:calc(46px + env(safe-area-inset-top)); z-index:19; display:inline-flex; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--shadow); color:var(--indigo-ink); font-size:13px; font-weight:800; cursor:pointer; padding:8px 15px; margin-bottom:12px; border-radius:999px; font-family:inherit;}
+.back:active{transform:translateY(1px);}
 .summary-box{background:var(--soft); border:1px dashed var(--line); border-radius:10px; padding:10px 12px; font-size:13px; white-space:pre-wrap; line-height:1.7;}
 .big-title-preview{font-size:20px; font-weight:800; line-height:1.4; margin-bottom:12px; padding:10px 12px; background:var(--indigo-bg); border-radius:10px; color:var(--indigo-deep);}
 .time-sel{display:flex;align-items:center;gap:4px;}
@@ -897,14 +898,8 @@ function deleteApo(id){
 }
 function openApoForm(id){subView={type:'apoForm',id};currentTab='apo';syncTabbar();render();window.scrollTo(0,0);}
 function syncTabbar(){document.querySelectorAll('#tabbar button').forEach(x=>x.classList.toggle('active',x.dataset.tab===currentTab));}
-/* 各詳細画面の下部にも表示する「戻る」ボタン */
-function bottomBackBtn(){
-  if(!subView)return '';
-  if(subView.type==='sheetA4')
-    return '<div class="btn-row no-print" style="margin:10px 0 22px"><button class="btn subtle block" onclick="subView={type:\'sheet\',date:\''+subView.date+'\'};render();window.scrollTo(0,0)">↑ 記入画面に戻る</button></div>';
-  const label={apoForm:'アポ記録一覧',refForm:'紹介者情報一覧',sheet:'日付リスト',weeklyForm:'週次振り返り一覧',mtgForm:'個別MTG一覧'}[subView.type]||'一覧';
-  return '<div class="btn-row" style="margin:10px 0 22px"><button class="btn subtle block" onclick="subView=null;render();window.scrollTo(0,0)">↑ '+label+'に戻る</button></div>';
-}
+/* 戻るボタンは画面上部（左上）に固定表示する方式に変更したため、下部ボタンは無し */
+function bottomBackBtn(){ return ''; }
 function setApo(id,field,value){
   const a=state.apos.find(x=>x.id===id); if(!a)return;
   a[field]=value; a.updatedAt=Date.now();
@@ -1352,7 +1347,8 @@ function goalView(){
   const lgCard=g=>{
     const open=state.ui['lgo_'+g.id]===true;
     return '<div class="card">'+
-    '<div class="lg-head" onclick="state.ui[\'lgo_'+g.id+'\']='+(open?'false':'true')+';save();render()">'+
+    '<button class="card-del" onclick="event.stopPropagation();delLG(\''+g.id+'\')" aria-label="削除">🗑</button>'+
+    '<div class="lg-head" style="padding-right:76px" onclick="state.ui[\'lgo_'+g.id+'\']='+(open?'false':'true')+';save();render()">'+
       '<span class="lg-line">'+esc(lgText(g)||'（未入力）タップで期限と目標を入力できます')+'</span>'+
       '<span class="lg-arrow">'+(open?'▲ 閉じる':'▼ 編集')+'</span>'+
     '</div>'+
@@ -1364,8 +1360,7 @@ function goalView(){
           (g.due?'<button type="button" class="btn danger small" onclick="setLG(\''+g.id+'\',\'due\',\'\');render()">✕ クリア</button>':'')+
           '<input type="date" id="due_'+g.id+'" value="'+esc(g.due)+'" class="due-hidden" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+
         '</div></div>'+
-      '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'+
-      '<button class="btn danger small" onclick="delLG(\''+g.id+'\')">削除</button>'
+      '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'
     :'')+
     '</div>';
   };
@@ -1389,7 +1384,6 @@ function goalView(){
       :(state.monthlyGoals.length?'<div class="empty">'+monthLabel(curMonth)+'の目標表はありません。<br>上の📅で他の月を選べます。</div>':'<div class="empty">「＋」で表を追加すると、月ごとにリストになります。</div>'));
   return '<h2 class="page">目標</h2>'+
     '<div class="section-label">長期目標</div>'+
-    (lgSummaryLines().length?lgSummaryBox():'')+
     '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addLongGoal()">＋ 長期目標を追加</button></div>'+
     '<p class="hint">現在の年度を表示します。過去・未来の年度は上の📅から選べます。期限は「カレンダーで選ぶ」を押したときだけ設定され、勝手に今日の日付は入りません。</p>'+
     lgHtml+
