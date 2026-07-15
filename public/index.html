@@ -629,9 +629,14 @@ document.addEventListener('keydown',e=>{
   const goalTbl=el.closest('table.goal');
   if(!slot&&!goalTbl)return;
   e.preventDefault();
-  const scope=slot?document.querySelectorAll('.slot-row input:not([type=checkbox])')
-                  :goalTbl.querySelectorAll('input:not([type=checkbox])');
-  const list=Array.from(scope);
+  let list;
+  if(slot){
+    /* 予定は予定の列を、変更は変更の列を、それぞれ下の行へ移動 */
+    const isRed=el.classList.contains('slot-red');
+    list=Array.from(document.querySelectorAll(isRed?'.slot-row input.slot-red':'.slot-row input:not(.slot-red)'));
+  }else{
+    list=Array.from(goalTbl.querySelectorAll('input:not([type=checkbox])'));
+  }
   const i=list.indexOf(el);
   if(i>=0&&i<list.length-1){const n=list[i+1];n.focus();try{n.select();}catch(_){}}
   else el.blur();
