@@ -317,6 +317,10 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .a4 .redtxt{color:#C0392B;font-weight:600;white-space:pre-wrap;min-height:36px;}
 .a4 .pre{white-space:pre-wrap;min-height:20px;}
 .a4 .cmark{display:inline-block;border:1.5px solid #C0392B;color:#C0392B;border-radius:50%;min-width:15px;text-align:center;font-weight:800;}
+#shareBanner{display:none; background:var(--indigo-ink); color:#fff; text-align:center; font-size:11.5px; font-weight:700; padding:7px 12px; letter-spacing:.02em;}
+body.share-view #shareBanner{display:block;}
+body.share-view .gear, body.share-view .bell{display:none!important;}
+body.share-view header.appbar h1::after{content:'（共有）'; font-size:11px; opacity:.85; font-weight:600; margin-left:4px;}
 body.a4-mode header.appbar, body.a4-mode nav.tabbar{display:none!important;}
 body.a4-mode main{padding:12px 13px 28px;}
 body.a4-mode .back{top:8px;}
@@ -377,6 +381,7 @@ table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--
   </div>
 </div>
 <div id="appRoot" style="display:none">
+<div id="shareBanner">🔒 閲覧専用（共有ビュー）— 見るだけのモードです</div>
 <header class="appbar">
   <div>
     <h1>My Life手帳</h1>
@@ -826,6 +831,7 @@ function askNotifyPermission(){
 /* ---------- ルーティング ---------- */
 let currentTab='apo';
 let subView=null; /* {type:'apoForm',id} など */
+let shareMode=false; /* 閲覧専用の共有ビューかどうか */
 document.getElementById('tabbar').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b)return;
   currentTab=b.dataset.tab; subView=null;
@@ -854,6 +860,7 @@ function render(){
     if(sv!==''){
       v.innerHTML=sv+bottomBackBtn();
       if(subView.type==='sheetA4')fitA4();
+      if(shareMode)lockReadOnly();
       return;
     }
   }
@@ -864,6 +871,7 @@ function render(){
   else if(currentTab==='schedule')v.innerHTML=scheduleListView();
   else if(currentTab==='weekly')v.innerHTML=weeklyListView();
   else if(currentTab==='mtg')v.innerHTML=mtgListView();
+  if(shareMode)lockReadOnly();
 }
 
 /* ============================================================
@@ -1696,6 +1704,15 @@ function openSettings(){
   '</div></div>'+
   '<div class="field"><label>スマホ通知</label><p class="hint">通知を許可すると、アプリを開いたときに「1か月以上アポが空いている方」がいれば通知が届きます。</p>'+
   '<button class="btn primary block" onclick="askNotifyPermission()">通知を許可する</button></div>'+
+  '<div class="field" style="margin-top:16px"><label>閲覧専用リンクで共有</label>'+
+  (function(){var tk=(state.ui&&state.ui.shareToken)||'';
+    if(tk){return '<p class="hint">このリンクを知っている人は、ログインなしであなたの内容を<b>見るだけ</b>できます（編集はできません）。相手に渡す時だけ共有し、不要になったら「無効にする」を押してください。</p>'+
+      '<div class="summary-box" style="word-break:break-all;font-size:12px">'+esc(shareUrlOf(tk))+'</div>'+
+      '<div class="btn-row" style="margin-top:8px"><button class="btn primary" style="flex:1" onclick="copyShareLink()">📋 リンクをコピー</button>'+
+      '<button class="btn danger" style="flex:1" onclick="revokeShareLink()">🔒 無効にする</button></div>';}
+    return '<p class="hint">押すと「見るだけ（編集不可）」のリンクを作れます。特定の人にだけURLを渡して共有できます。</p>'+
+      '<button class="btn ghost block" onclick="createShareLink()">🔗 閲覧専用リンクを発行</button>';
+  })()+'</div>'+
   '<div class="field" style="margin-top:16px"><label>データのバックアップ</label>'+
   '<p class="hint">データはサーバーに自動保存され、ログインしたどの端末からも同じ内容が見られます。念のための書き出しはこちらから。</p>'+
   '<button class="btn ghost block" onclick="exportData()">⬇ バックアップを書き出し</button></div>'+
@@ -2130,6 +2147,86 @@ async function afterLogin(){
   }
 }
 
+/* ============================================================
+   閲覧専用の共有リンク（発行・共有ビュー）
+   ============================================================ */
+function randToken(){
+  const a=new Uint8Array(18); (crypto&&crypto.getRandomValues)?crypto.getRandomValues(a):a.forEach((_,i)=>a[i]=Math.floor(Math.random()*256));
+  return Array.from(a).map(b=>('0'+b.toString(16)).slice(-2)).join('');
+}
+function shareUrlOf(token){return location.origin+location.pathname+'?share='+token;}
+async function createShareLink(){
+  if(!currentUser){toast('ログインが必要です');return;}
+  if(!navigator.onLine){toast('電波の良い場所でお試しください');return;}
+  let token=(state.ui&&state.ui.shareToken)||'';
+  if(!token)token=randToken();
+  try{
+    const {error}=await sb.from('shares').upsert({token,user_id:currentUser.id},{onConflict:'token'});
+    if(error){toast('リンク作成に失敗しました');return;}
+  }catch(e){toast('リンク作成に失敗しました');return;}
+  if(!state.ui)state.ui={};
+  state.ui.shareToken=token; save();
+  openSettings(); /* 設定画面を開き直してリンクを表示 */
+  toast('閲覧専用リンクを作成しました');
+}
+async function revokeShareLink(){
+  const token=(state.ui&&state.ui.shareToken)||'';
+  if(!token){openSettings();return;}
+  askConfirm('共有リンクを無効にしますか？（今のリンクは開けなくなります）',async()=>{
+    try{ if(currentUser)await sb.from('shares').delete().eq('token',token).eq('user_id',currentUser.id); }catch(e){}
+    if(state.ui)state.ui.shareToken=''; save();
+    closeModal(); openSettings(); toast('共有リンクを無効にしました');
+  });
+}
+function copyShareLink(){
+  const token=(state.ui&&state.ui.shareToken)||''; if(!token)return;
+  const t=shareUrlOf(token);
+  const done=()=>toast('リンクをコピーしました');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(()=>{fallbackCopy(t);done();});}
+  else{fallbackCopy(t);done();}
+}
+async function enterShareView(token){
+  shareMode=true;
+  document.body.classList.add('share-view');
+  showApp();
+  const v=document.getElementById('view');
+  if(v)v.innerHTML='<div class="empty">共有された内容を読み込んでいます…</div>';
+  try{
+    const {data,error}=await sb.rpc('get_shared_data',{p_token:token});
+    if(error||!data||!data.app){
+      document.body.classList.remove('share-view'); shareMode=false;
+      showAuthScreen('共有リンクが無効か、期限切れです。作成者にご確認ください。');
+      return;
+    }
+    state=Object.assign(defaultState(),data.app);
+    state.apos=(data.apos||[]).map(r=>Object.assign({id:r.id},r.data||{}));
+    state.referrals=(data.referrals||[]).map(r=>Object.assign({id:r.id},r.data||{}));
+    applySavedToState(state);
+    /* 上書き：applySavedToStateがapos/referralsを消さないよう再セット */
+    state.apos=(data.apos||[]).map(r=>Object.assign({id:r.id},r.data||{}));
+    state.referrals=(data.referrals||[]).map(r=>Object.assign({id:r.id},r.data||{}));
+    currentTab='schedule'; subView=null;
+    applyFontSize(); applyTheme();
+    setSyncStatus('ok','閲覧専用');
+    render(); syncTabbar();
+  }catch(e){
+    document.body.classList.remove('share-view'); shareMode=false;
+    showAuthScreen('共有内容を読み込めませんでした。電波の良い場所で再読み込みしてください。');
+  }
+}
+function lockReadOnly(){
+  const root=document.getElementById('view'); if(!root)return;
+  root.querySelectorAll('input,textarea').forEach(el=>{el.readOnly=true;});
+  root.querySelectorAll('select').forEach(el=>{ if(!el.closest('.month-nav'))el.disabled=true; }); /* 月・年の切替だけは操作可 */
+  root.querySelectorAll('button').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    const isDel=b.classList.contains('card-del')||b.classList.contains('abd-del')||b.classList.contains('mic');
+    const editish=/(^|[^a-zA-Z])(add|del|delete|remove|reset|export|duplicate|createRef|refresh|askNotify|setTheme|setFont|saveTpl|resetAll|customize)/i.test(oc);
+    const nav=/(subView|render\(|showPicker|Month\(|Year\(|preview|printA4|closeModal|scrollTo)/.test(oc);
+    if(isDel||(editish&&!nav))b.style.display='none';
+  });
+}
+
 /* ---------- 起動 ---------- */
 (async function init(){
   applyFontSize();
@@ -2141,6 +2238,8 @@ async function afterLogin(){
     showAuthScreen('アプリの部品を読み込めませんでした。電波の良い場所でページを再読み込みしてください。');
     return;
   }
+  const shareToken=new URLSearchParams(location.search).get('share');
+  if(shareToken){ await enterShareView(shareToken); return; }
   try{
     const {data}=await sb.auth.getSession();
     if(data&&data.session&&data.session.user){
