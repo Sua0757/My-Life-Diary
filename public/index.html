@@ -313,6 +313,9 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .a4 .redtxt{color:#C0392B;font-weight:600;white-space:pre-wrap;min-height:36px;}
 .a4 .pre{white-space:pre-wrap;min-height:20px;}
 .a4 .cmark{display:inline-block;border:1.5px solid #C0392B;color:#C0392B;border-radius:50%;min-width:15px;text-align:center;font-weight:800;}
+body.a4-mode header.appbar, body.a4-mode nav.tabbar{display:none!important;}
+body.a4-mode main{padding:12px 13px 28px;}
+body.a4-mode .back{top:8px;}
 @media print{
   header.appbar,nav.tabbar,.no-print,.toast{display:none!important;}
   body{background:#fff;padding:0;}
@@ -837,6 +840,7 @@ function render(){
   applyTheme();
   requestAnimationFrame?requestAnimationFrame(growAll):setTimeout(growAll,0);
   const v=$('#view');
+  document.body.classList.toggle('a4-mode', !!(subView&&subView.type==='sheetA4'));
   if(subView){
     let sv='';
     if(subView.type==='apoForm')sv=apoFormView(subView.id);
@@ -1574,8 +1578,8 @@ function a4View(date){
   const circ=(val)=>{let o='';for(let i=1;i<=10;i++)o+=(Number(val)===i?'<span class="cmark">'+i+'</span>':i)+'&nbsp;&nbsp;';return o;};
   const gl=(label,val)=>'<div style="margin:2px 0"><b>'+label+'</b>『<span class="gline" style="display:inline-block;min-width:200px;white-space:pre-wrap;vertical-align:top">'+esc(val||'')+'</span>』</div>';
   return '<button class="back no-print" onclick="subView={type:\'sheet\',date:\''+date+'\'};render();window.scrollTo(0,0)">← 記入画面に戻る</button>'+
-  '<div class="btn-row no-print"><button class="btn primary block" onclick="window.print()">🖨 印刷・PDFに保存</button></div>'+
-  '<p class="hint no-print" style="margin-bottom:10px">印刷画面で「PDFに保存」を選ぶとA4のPDFになります。</p>'+
+  '<div class="btn-row no-print"><button class="btn primary block" onclick="printA4()">🖨 印刷・PDFに保存</button></div>'+
+  '<p class="hint no-print" style="margin-bottom:10px">ボタンを押すと内容だけの印刷画面が開きます。そこで「PDFに保存」を選ぶとA4のPDFになります。</p>'+
   '<div id="a4wrap"><div class="a4" id="a4paper">'+
     '<div class="a4head">'+fmtDate(date)+'</div>'+
     gl('長期目標　',s.longGoal)+gl('今月の目標',s.monthGoal)+gl('今日の目標',s.todayGoal)+
@@ -1613,6 +1617,28 @@ function fitA4(){
   const sc=Math.min(1, w.clientWidth/794);
   p.style.transform='scale('+sc+')';
   w.style.height=(p.offsetHeight*sc+12)+'px';
+}
+/* 内容だけを別ウィンドウに出して印刷（スタンドアロンPWA/アプリ内ブラウザでも動くように） */
+function printA4(){
+  const paper=document.getElementById('a4paper');
+  if(!paper){window.print();return;}
+  const css=Array.from(document.querySelectorAll('style')).map(s=>s.textContent).join('\n');
+  const win=window.open('','_blank');
+  if(!win){ /* ポップアップがブロックされた場合は従来方式 */ window.print(); return; }
+  const doc='<!doctype html><html lang="ja"><head><meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width, initial-scale=1">'+
+    '<title>スケジュールシート</title><style>'+css+'</style>'+
+    '<style>body{background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
+    '#pw{overflow:visible;}#pw .a4{transform:none!important;border:none;box-shadow:none;width:auto;min-height:auto;padding:0;margin:0 auto;}'+
+    '@page{size:A4;margin:10mm;}'+
+    '.pbar{position:sticky;top:0;display:flex;gap:8px;padding:10px;background:#fff;border-bottom:1px solid #ddd;font-family:sans-serif;}'+
+    '.pbar button{flex:1;padding:11px;font-size:15px;font-weight:700;border:none;border-radius:10px;background:#F26A2E;color:#fff;}'+
+    '@media print{.pbar{display:none!important;}}</style></head><body>'+
+    '<div class="pbar"><button onclick="window.print()">🖨 印刷・PDFに保存</button><button onclick="window.close()" style="background:#eee;color:#333">閉じる</button></div>'+
+    '<div id="pw"><div class="a4">'+paper.innerHTML+'</div></div>'+
+    '<script>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},350);};<\/script>'+
+    '</body></html>';
+  win.document.open(); win.document.write(doc); win.document.close();
 }
 window.addEventListener('resize',()=>{if(subView&&subView.type==='sheetA4')fitA4();});
 /* シートのフォーマット編集 */
