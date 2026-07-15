@@ -1452,7 +1452,8 @@ function scheduleListView(){
       const s=state.schedules[d];
       const done1=Object.values(s.todo1||{}).filter(Boolean).length;
       return '<div class="card tap" onclick="openSheet(\''+d+'\')">'+
-        '<div class="rec-title" style="font-size:15px">'+fmtDate(d)+'</div>'+
+        '<button class="card-del" onclick="event.stopPropagation();deleteSheet(\''+d+'\')" aria-label="削除">🗑</button>'+
+        '<div class="rec-title" style="font-size:15px;padding-right:40px">'+fmtDate(d)+'</div>'+
         '<div class="rec-sub">'+(s.todayGoal?'今日の目標：'+esc(s.todayGoal):'今日の目標：未記入')+'</div>'+
         '<div class="rec-meta">'+(s.ach10?'<span class="chip blue">達成度 '+esc(s.ach10)+'/10</span>':'')+
         '<span class="chip">ToDo '+done1+'/'+state.scheduleTemplate.todo1.length+'</span>'+
