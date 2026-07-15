@@ -1683,9 +1683,9 @@ function a4View(date){
         '<div style="font-size:12px">朝の気分　　：'+circ(s.mood)+'</div>'+
         '<div style="font-size:12px">今日の達成度：'+circ(s.ach10)+'</div>'+
         (s.scoreWhy?'<div class="pre" style="font-size:12px">達成度の結果の原因：'+esc(s.scoreWhy)+'</div>':'')+
-        '<div style="margin-top:4px"><b>《'+esc(tpl.apoListTitle||'今日のアポした人リスト')+'》</b><div class="pre">'+esc(s.apoList||'')+'</div></div>'+
-        '<div class="grow" style="margin-top:4px"><b>《３行日報 気付きなども》</b><div class="redtxt">'+esc(s.diary||'')+'</div></div>'+
-        (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><b>《'+esc(cf)+'》</b><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
+        '<div style="margin-top:4px"><h5>'+esc(tpl.apoListTitle||'今日のアポした人リスト')+'</h5><div class="pre">'+esc(s.apoList||'')+'</div></div>'+
+        '<div class="grow" style="margin-top:4px"><h5>３行日報 気付きなども</h5><div class="redtxt">'+esc(s.diary||'')+'</div></div>'+
+        (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><h5>'+esc(cf)+'</h5><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
       '</div>'+
     '</div>'+
   '</div></div>'+
