@@ -13,6 +13,9 @@ create table if not exists public.shares (
 
 alter table public.shares enable row level security;
 
+-- ログインユーザーにテーブル権限を付与（RLSで行は本人分だけに制限されます）
+grant select, insert, update, delete on table public.shares to authenticated;
+
 -- 本人だけが、自分の共有リンクを作成・確認・削除できる
 drop policy if exists "own shares" on public.shares;
 create policy "own shares" on public.shares
