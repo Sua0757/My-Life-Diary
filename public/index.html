@@ -1858,7 +1858,7 @@ function addPerson(recId,listField){
   save(); render();
 }
 function abdSnapshot(){
-  return state.apos.filter(a=>['A','B','D'].includes(a.abcd))
+  return state.apos.filter(a=>(Number(a.count)||1)===1&&['A','B','D'].includes(a.abcd)) /* 1回目のアポのみ・複製した2回目以降は同一人物なので除外 */
     .slice().sort((a,b)=>a.updatedAt-b.updatedAt)
     .map(a=>({grp:a.abcd,name:a.name||'',age:a.age!==''?String(grownNumber(a.age,a.ageYear)):'',job:joinVal(a.jobSel,a.job),dev:joinVal(a.devSel,a.dev),memo:''}));
 }
