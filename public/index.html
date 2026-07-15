@@ -297,24 +297,26 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .ev-opt.on::after{content:"✓"; position:absolute; top:-7px; right:-7px; width:20px; height:20px; border-radius:50%; background:var(--grad); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px var(--accent-glow);}
 /* --- A4プレビュー --- */
 #a4wrap{width:100%;overflow:hidden;}
-.a4{width:794px;min-height:1123px;background:#fff;border:1px solid #ccc;box-shadow:0 3px 14px rgba(0,0,0,.15);padding:36px;transform-origin:top left;color:#1b1b1b;font-size:11.5px;line-height:1.55;display:flex;flex-direction:column;}
-.a4 .a4head{font-size:14px;font-weight:800;margin-bottom:6px;}
+.a4{width:794px;min-height:1123px;background:#fff;border:1px solid #ccc;box-shadow:0 3px 14px rgba(0,0,0,.15);padding:36px;transform-origin:top left;color:#1b1b1b;font-size:12.5px;line-height:1.55;display:flex;flex-direction:column;}
+.a4 .a4head{font-size:15px;font-weight:800;margin-bottom:6px;}
 .a4 .gline{border-bottom:1px solid #777;padding:0 3px;}
+.a4 .a4goal{font-size:16px;margin:4px 0;font-weight:700;line-height:1.5;}
+.a4 .a4goal .gline{font-size:16px;min-width:220px;}
 .a4 .cols{display:flex;gap:16px;margin-top:10px;flex:1;align-items:stretch;}
 .a4 .colL{width:45%;display:flex;flex-direction:column;}.a4 .colR{flex:1;display:flex;flex-direction:column;}
 .a4 .slotlist{display:flex;flex-direction:column;flex:1;}
 .a4 .slotlist .srow{flex:1;}
 .a4 .grow{flex:1;display:flex;flex-direction:column;}
 .a4 .grow .redtxt{flex:1;}
-.a4 h5{background:#2C6FBE;color:#fff;display:inline-block;padding:1px 10px;border-radius:4px;margin:9px 0 4px;font-size:11px;letter-spacing:.06em;font-weight:700;}
+.a4 h5{background:#2C6FBE;color:#fff;display:inline-block;padding:1px 10px;border-radius:4px;margin:9px 0 4px;font-size:12px;letter-spacing:.06em;font-weight:700;}
 .a4 .srow{display:flex;border-bottom:1px dotted #999;align-items:flex-end;min-height:17px;}
-.a4 .srow .st{width:46px;font-weight:700;color:#2C6FBE;font-size:10px;}
-.a4 .srow .sv{flex:1;padding:0 3px;font-size:10.5px;}
+.a4 .srow .st{width:48px;font-weight:700;color:#2C6FBE;font-size:11px;}
+.a4 .srow .sv{flex:1;padding:0 3px;font-size:12px;}
 .a4 .srow .sv.sred{color:#C0392B;font-weight:600;border-left:1px dotted #bbb;}
 .a4 .srow .sabc{width:24px;text-align:center;color:#C0392B;font-weight:800;}
-.a4 .titem{display:flex;gap:5px;font-size:10.5px;line-height:1.5;}
+.a4 .titem{display:flex;gap:5px;font-size:12px;line-height:1.5;}
 .a4 table.mt{border-collapse:collapse;width:100%;margin:2px 0;}
-.a4 table.mt th,.a4 table.mt td{border:1px solid #888;padding:1px 4px;font-size:10px;text-align:left;}
+.a4 table.mt th,.a4 table.mt td{border:1px solid #888;padding:2px 4px;font-size:11px;text-align:left;}
 .a4 table.mt th{background:#E2EFFC;color:#2C6FBE;}
 .a4 .redtxt{color:#C0392B;font-weight:600;white-space:pre-wrap;min-height:36px;}
 .a4 .pre{white-space:pre-wrap;min-height:20px;}
@@ -1651,7 +1653,7 @@ function a4View(date){
   const abc=s.slotABC||{}, mgoals=s.metricGoals||{};
   const chk=v=>v?'☑':'☐';
   const circ=(val)=>{let o='';for(let i=1;i<=10;i++)o+=(Number(val)===i?'<span class="cmark">'+i+'</span>':i)+'&nbsp;&nbsp;';return o;};
-  const gl=(label,val)=>'<div style="margin:2px 0"><b>'+label+'</b>『<span class="gline" style="display:inline-block;min-width:200px;white-space:pre-wrap;vertical-align:top">'+esc(val||'')+'</span>』</div>';
+  const gl=(label,val)=>'<div class="a4goal"><b>'+label+'</b>『<span class="gline" style="display:inline-block;white-space:pre-wrap;vertical-align:top">'+esc(val||'')+'</span>』</div>';
   return '<button class="back no-print" onclick="subView={type:\'sheet\',date:\''+date+'\'};render();window.scrollTo(0,0)">← 記入画面に戻る</button>'+
   '<div id="a4wrap"><div class="a4" id="a4paper">'+
     '<div class="a4head">'+fmtDate(date)+'</div>'+
@@ -1659,8 +1661,8 @@ function a4View(date){
     '<div class="cols">'+
       '<div class="colL">'+
         '<h5>スケジュール</h5>'+
-        '<div style="font-size:10.5px">昨日の就寝時間：'+esc(s.sleep||'　　　')+'　起床時間：'+esc(s.wake||'　　　')+'<br>始業時間：'+esc(s.startW||'　　　')+'　終業時間：'+esc(s.endW||'　　　')+'</div>'+
-        '<div class="srow" style="border-bottom:none"><span class="st"></span><span class="sv" style="font-size:9px;color:#2C6FBE;font-weight:700">予定</span><span class="sv sred" style="font-size:9px;font-weight:700">変更</span><span class="sabc" style="font-size:9px">ABC</span></div>'+
+        '<div style="font-size:12px">昨日の就寝時間：'+esc(s.sleep||'　　　')+'　起床時間：'+esc(s.wake||'　　　')+'<br>始業時間：'+esc(s.startW||'　　　')+'　終業時間：'+esc(s.endW||'　　　')+'</div>'+
+        '<div class="srow" style="border-bottom:none"><span class="st"></span><span class="sv" style="font-size:10.5px;color:#2C6FBE;font-weight:700">予定</span><span class="sv sred" style="font-size:10.5px;font-weight:700">変更</span><span class="sabc" style="font-size:10.5px">ABC</span></div>'+
         '<div class="slotlist">'+tpl.timeSlots.map(t=>'<div class="srow"><span class="st">'+esc(t)+'-</span><span class="sv"'+((s.slotStrike||{})[t]?' style="text-decoration:line-through;color:#999"':'')+'>'+esc(s.slots[t]||'')+'</span><span class="sv sred">'+esc((s.slotsRed||{})[t]||'')+'</span><span class="sabc">'+esc(abc[t]||'')+'</span></div>').join('')+'</div>'+
       '</div>'+
       '<div class="colR">'+
@@ -1672,11 +1674,11 @@ function a4View(date){
         '<table class="mt"><tr><th></th><th style="width:44px">目標</th><th style="width:44px">結果</th></tr>'+
         tpl.metrics.map((m,i)=>'<tr><td>'+esc(m)+'</td><td style="text-align:center">'+esc(mgoals[i]||'')+'</td><td style="text-align:center">'+esc(s.metrics[i]||'')+'</td></tr>').join('')+'</table>'+
         '<h5>イベント参加した日の振返り</h5>'+
-        '<div style="font-size:10.5px">①イベント数：'+esc(s.evCount||'　')+'　②金額合計：'+esc(s.evCost||'　')+'円<br>③LINE交換人数：'+esc(s.evLine||'　')+'　❹コスパ（②÷③）：'+cospa(s)+' 円/人</div>'+
+        '<div style="font-size:12px">①イベント数：'+esc(s.evCount||'　')+'　②金額合計：'+esc(s.evCost||'　')+'円<br>③LINE交換人数：'+esc(s.evLine||'　')+'　❹コスパ（②÷③）：'+cospa(s)+' 円/人</div>'+
         '<h5>1日の振り返り</h5>'+
-        '<div style="font-size:10.5px">朝の気分　　：'+circ(s.mood)+'</div>'+
-        '<div style="font-size:10.5px">今日の達成度：'+circ(s.ach10)+'</div>'+
-        (s.scoreWhy?'<div class="pre" style="font-size:10.5px">達成度の結果の原因：'+esc(s.scoreWhy)+'</div>':'')+
+        '<div style="font-size:12px">朝の気分　　：'+circ(s.mood)+'</div>'+
+        '<div style="font-size:12px">今日の達成度：'+circ(s.ach10)+'</div>'+
+        (s.scoreWhy?'<div class="pre" style="font-size:12px">達成度の結果の原因：'+esc(s.scoreWhy)+'</div>':'')+
         '<div style="margin-top:4px"><b>《'+esc(tpl.apoListTitle||'今日のアポした人リスト')+'》</b><div class="pre">'+esc(s.apoList||'')+'</div></div>'+
         '<div class="grow" style="margin-top:4px"><b>《３行日報 気付きなども》</b><div class="redtxt">'+esc(s.diary||'')+'</div></div>'+
         (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><b>《'+esc(cf)+'》</b><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
