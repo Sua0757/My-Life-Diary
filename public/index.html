@@ -326,8 +326,10 @@ body.share-view #shareBanner{display:block;}
 body.share-view .gear, body.share-view .bell{display:none!important;}
 body.share-view header.appbar h1::after{content:'（共有）'; font-size:11px; opacity:.85; font-weight:600; margin-left:4px;}
 body.a4-mode header.appbar, body.a4-mode nav.tabbar{display:none!important;}
-body.a4-mode main{padding:12px 13px 28px;}
-body.a4-mode .back{top:8px;}
+body.a4-mode main{padding:0 0 16px; max-width:none;}
+body.a4-mode .back{top:8px; margin:8px 0 6px 8px;}
+body.a4-mode #a4wrap{width:100%;}
+body.a4-mode .a4{border:none; box-shadow:none;}
 @media print{
   header.appbar,nav.tabbar,.no-print,.toast,#shareBanner{display:none!important;}
   body{background:#fff;padding:0;margin:0;}
