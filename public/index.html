@@ -500,11 +500,12 @@ async function pushAppData(){
   }catch(e){queueOp({type:'app_data',op:'upsert',rowId:'blob',payload});}
 }
 async function pullAppData(){
-  if(!currentUser)return;
+  if(!currentUser)return false;
   try{
     const {data,error}=await sb.from('app_data').select('data').eq('user_id',currentUser.id).maybeSingle();
-    if(!error&&data&&data.data){Object.assign(state,data.data);}
+    if(!error&&data&&data.data){Object.assign(state,data.data);return true;}
   }catch(e){/* オフライン時などは無視してローカルの内容を使う */}
+  return false;
 }
 
 /* ---------- アポ記録・紹介者情報（1件ずつ個別に同期＝共有機能のため） ---------- */
@@ -546,12 +547,20 @@ async function pullApposAndReferrals(){
   if(!currentUser)return;
   try{
     const {data:apoRows,error:e1}=await sb.from('apos').select('id,data').eq('user_id',currentUser.id);
-    if(!e1&&apoRows)state.apos=apoRows.map(r=>Object.assign({},r.data,{id:r.id}));
+    /* クラウドに行がある時だけ上書き。空配列でローカルを消さない（未同期のデータを守るため） */
+    if(!e1&&apoRows&&apoRows.length)state.apos=apoRows.map(r=>Object.assign({},r.data,{id:r.id}));
   }catch(e){}
   try{
     const {data:refRows,error:e2}=await sb.from('referrals').select('id,data').eq('user_id',currentUser.id);
-    if(!e2&&refRows)state.referrals=refRows.map(r=>Object.assign({},r.data,{id:r.id}));
+    if(!e2&&refRows&&refRows.length)state.referrals=refRows.map(r=>Object.assign({},r.data,{id:r.id}));
   }catch(e){}
+}
+/* 初回など、クラウドが空のときに手元のデータをアップして初期化する */
+async function pushAllLocalToCloud(){
+  if(!currentUser||!navigator.onLine)return;
+  try{ await pushAppData(); }catch(e){}
+  for(const a of (state.apos||[])){ if(a&&a.id){ try{ await syncApoRow(a.id); }catch(e){} } }
+  for(const r of (state.referrals||[])){ if(r&&r.id){ try{ await syncReferralRow(r.id); }catch(e){} } }
 }
 
 /* ---------- 全体の保存（ローカルは常に即保存、サーバーへは非同期で反映） ---------- */
@@ -2174,11 +2183,12 @@ async function afterLogin(){
   tryNotify();
   if(navigator.onLine){
     setSyncStatus('wait','同期中…');
-    await pullAppData();
+    const hadCloud=await pullAppData();
     await pullApposAndReferrals();
     applySavedToState(state);
     localCache.set(state);
     render();
+    if(!hadCloud){ await pushAllLocalToCloud(); } /* クラウドが空なら手元のデータで初期化（初回同期） */
     await flushQueue();
     setSyncStatus('ok','同期済み');
   }else{
