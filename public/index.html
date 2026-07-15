@@ -1030,12 +1030,12 @@ function apoFormView(id){
     F('名前',vText('f_name_'+id,a.name,'','oninput="setApo(\''+id+'\',\'name\',this.value)"'))+
     F('名前（カタカナ）','<input type="text" id="f_nameKana_'+id+'" value="'+esc(a.nameKana)+'" placeholder="ひらがな名は自動変換" oninput="setApo(\''+id+'\',\'nameKana\',this.value)">','ひらがなで名前を入れると自動でカタカナに')+
     F('年齢',bind('<input type="number" inputmode="numeric" value="'+esc(a.age)+'" placeholder="例：28">','age'),
-      a.age!==''?'表示は毎年+1 → 現在 '+grownNumber(a.age,a.ageYear)+'歳（'+a.ageYear+'年時点 '+a.age+'歳）':'記入した年から1年ごとに+1されます')+
+      '表示は年度ごとに自動で+１されます')+
     F('年収',selOnly('incomeSel','income','年収'))+
     F('仕事',selOnly('jobSel','job','仕事'))+
     F('開発・構築の有無',selOnly('devSel','dev','開発・構築の有無'))+
     F('経験年数',bind('<input type="number" inputmode="decimal" step="0.5" value="'+esc(a.exp)+'" placeholder="例：3">','exp'),
-      a.exp!==''?'表示は毎年+1 → 現在 '+grownNumber(a.exp,a.expYear)+'年（'+a.expYear+'年時点 '+a.exp+'年）':'記入した年から1年ごとに+1されます')+
+      '表示は年度ごとに自動で+１されます')+
     F('アポ回数',bind('<input type="number" inputmode="numeric" value="'+esc(a.count)+'" placeholder="1">','count'),'2回目以降はタイトルに ②③… が自動で付きます')+
     F('アポした目的（複数選択OK）',multiSelHtml(id,'purposeSel','purpose')+optEditBtn('purpose','アポした目的')+vArea('f_purpose_'+id,a.purpose,'','', 'oninput="setApo(\''+id+'\',\'purpose\',this.value)"'))+
     F('着地',vArea('f_landing_'+id,a.landing,'','', 'oninput="setApo(\''+id+'\',\'landing\',this.value)"'))+
