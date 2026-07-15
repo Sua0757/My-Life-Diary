@@ -372,11 +372,13 @@ table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
     <h1>My Life手帳</h1>
-    <p class="hint">招待されたメールアドレスでログインしてください。</p>
+    <p class="hint">メールアドレスでログインしてください。<br>はじめての方は下から新しく作成できます。</p>
     <div class="field"><label>メールアドレス</label><input type="email" id="authEmail" autocomplete="username"></div>
     <div class="field"><label>パスワード</label><input type="password" id="authPassword" autocomplete="current-password"></div>
     <div class="auth-error" id="authError" style="display:none"></div>
     <button class="btn primary block" onclick="doLogin()">ログイン</button>
+    <div style="display:flex;align-items:center;gap:10px;margin:16px 0 10px;color:var(--sub);font-size:12px"><span style="flex:1;height:1px;background:var(--line)"></span>はじめての方<span style="flex:1;height:1px;background:var(--line)"></span></div>
+    <button class="btn ghost block" onclick="doSignup()">＋ 新しくアカウントを作成</button>
     <div class="auth-status" id="authStatus"></div>
   </div>
 </div>
@@ -2115,6 +2117,43 @@ async function doLogin(){
     }
     currentUser=data.user;
     await afterLogin();
+  }catch(e){
+    statusEl.textContent='';
+    errEl.textContent='通信エラーが発生しました。電波の良い場所でもう一度お試しください。';
+    errEl.style.display='block';
+  }
+}
+async function doSignup(){
+  if(sdkLoadFailed||!sb){
+    const errEl=document.getElementById('authError');
+    errEl.textContent='アプリの部品を読み込めませんでした。電波の良い場所で、ページを一度再読み込みしてもう一度お試しください。';
+    errEl.style.display='block';
+    return;
+  }
+  const email=document.getElementById('authEmail').value.trim();
+  const password=document.getElementById('authPassword').value;
+  const errEl=document.getElementById('authError');
+  const statusEl=document.getElementById('authStatus');
+  errEl.style.display='none';
+  if(!email||!password){errEl.textContent='メールアドレスとパスワードを入力してください';errEl.style.display='block';return;}
+  if(password.length<6){errEl.textContent='パスワードは6文字以上で作成してください';errEl.style.display='block';return;}
+  statusEl.textContent='アカウントを作成中…';
+  try{
+    const {data,error}=await sb.auth.signUp({email,password});
+    if(error){
+      statusEl.textContent='';
+      const m=(error.message||'');
+      errEl.textContent=/already|registered|exists/i.test(m)?'このメールアドレスはすでに登録されています。ログインをお試しください。':('アカウントを作成できませんでした：'+m);
+      errEl.style.display='block';
+      return;
+    }
+    if(data&&data.session&&data.user){
+      /* メール確認オフ → そのままログイン */
+      currentUser=data.user; await afterLogin();
+    }else{
+      /* メール確認オン → 確認メール送信済み */
+      statusEl.textContent='確認メールを送信しました。メール内のリンクを開いて認証してから、上の「ログイン」でお進みください。';
+    }
   }catch(e){
     statusEl.textContent='';
     errEl.textContent='通信エラーが発生しました。電波の良い場所でもう一度お試しください。';
