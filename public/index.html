@@ -300,8 +300,8 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .a4{width:794px;min-height:1123px;background:#fff;border:1px solid #ccc;box-shadow:0 3px 14px rgba(0,0,0,.15);padding:36px;transform-origin:top left;color:#1b1b1b;font-size:12.5px;line-height:1.55;display:flex;flex-direction:column;}
 .a4 .a4head{font-size:15px;font-weight:800;margin-bottom:6px;}
 .a4 .gline{border-bottom:1px solid #777;padding:0 3px;}
-.a4 .a4goal{font-size:14px;margin:3px 0;font-weight:700;line-height:1.5;}
-.a4 .a4goal .gline{font-size:14px;min-width:220px;}
+.a4 .a4goal{font-size:12.5px;margin:3px 0;font-weight:700;line-height:1.5;}
+.a4 .a4goal .gline{font-size:12.5px;min-width:220px;}
 .a4 .cols{display:flex;gap:16px;margin-top:10px;flex:1;align-items:stretch;}
 .a4 .colL{width:45%;display:flex;flex-direction:column;}.a4 .colR{flex:1;display:flex;flex-direction:column;}
 .a4 .slotlist{display:flex;flex-direction:column;flex:1;}
@@ -423,9 +423,15 @@ table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--
 /* ============================================================
    My Life手帳 — オフライン対応・複数端末同期版
    ============================================================ */
-/* ---------- サービスワーカー登録（オフライン起動用） ---------- */
+/* ---------- サービスワーカー登録（オフライン起動用＋新版の自動更新） ---------- */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  let _swRefreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(_swRefreshing)return; _swRefreshing=true; window.location.reload(); /* 新しい版が有効になったら自動で読み込み直す */
+  });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{ try{reg.update();}catch(e){} }).catch(()=>{});
+  });
 }
 /* ---------- Supabase 接続設定 ---------- */
 const SUPABASE_URL='https://zgeakzkwqwcmiuvgjmwy.supabase.co';

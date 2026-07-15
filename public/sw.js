@@ -4,18 +4,21 @@
    - HTML（アプリ本体）は「ネット優先・失敗したらキャッシュ」= オンライン時は常に最新、オフライン時は前回の内容で起動。
    - Supabase SDK（外部スクリプト）は「キャッシュ優先」= オフラインでも読み込める。
    - Supabaseへのデータ通信(POST等)やGET以外は素通り（キャッシュしない）。 */
-const CACHE = 'mylife-cache-v1';
+const CACHE = 'mylife-cache-v2';
 const SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
-  /* addAllは1つでも失敗すると全部キャッシュしないため、個別にキャッシュする
-     （CDNが取れなくてもアプリ本体HTMLは必ずキャッシュされるように） */
+  /* アプリ本体(HTML)のキャッシュだけをinstallの完了条件にする（同一オリジンで速い）。
+     これで新版の有効化＝自動更新が遅れない。 */
   e.waitUntil(
-    caches.open(CACHE).then((c) => Promise.all(
-      ['./', './index.html', SDK].map((u) => c.add(u).catch(() => {}))
-    ))
+    caches.open(CACHE).then((c) => Promise.all([
+      c.add('./').catch(() => {}),
+      c.add('./index.html').catch(() => {})
+    ]))
   );
+  /* Supabase SDKは待たずに裏でキャッシュ（遅い/失敗しても起動や更新を妨げない） */
+  caches.open(CACHE).then((c) => c.add(SDK).catch(() => {}));
 });
 
 self.addEventListener('activate', (e) => {
