@@ -334,17 +334,15 @@ body.a4-mode .back{top:8px;}
 table.goal.wknum th, table.goal.wknum td{text-align:center;}
 table.goal.wknum input{font-size:14px;}
 table.mng.abdtbl td, table.mng.abdtbl th{white-space:normal;}
-.abd-card{position:relative; background:#fff; border:1.5px solid var(--line); border-radius:var(--radius); padding:11px 12px 12px; margin-top:8px; box-shadow:var(--shadow);}
-.abd-del{position:absolute; top:8px; right:8px; border:none; background:var(--red-bg); color:var(--red); border-radius:9px; width:32px; height:28px; font-size:13px; cursor:pointer;}
-.abd-line{display:flex; align-items:center; gap:8px; padding-right:36px;}
-.abd-star{color:var(--indigo-deep); font-size:17px; line-height:1;}
-.abd-name{flex:1; min-width:0; font-weight:700;}
-.abd-meta{display:grid; grid-template-columns:66px 1fr 1fr; gap:8px; margin-top:9px;}
-.abd-mini{display:flex; flex-direction:column; gap:3px; font-size:10.5px; color:var(--sub); font-weight:600;}
-.abd-mini input{width:100%; padding:8px 9px; font-size:14px;}
-.abd-memo{display:block; margin-top:9px; font-size:10.5px; color:var(--sub); font-weight:600;}
-.abd-memo span{display:block; margin-bottom:4px;}
-.abd-memo textarea{width:100%; min-height:40px; font-size:14px; font-weight:400; color:var(--ink); line-height:1.6;}
+.abdfit-wrap{width:100%; margin-top:6px;}
+table.abdfit{width:100%; table-layout:fixed; border-collapse:collapse; background:#fff; border:1.5px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+table.abdfit col.c-star{width:20px;} table.abdfit col.c-name{width:16%;} table.abdfit col.c-age{width:30px;} table.abdfit col.c-job{width:16%;} table.abdfit col.c-dev{width:16%;} table.abdfit col.c-del{width:28px;}
+table.abdfit th{background:var(--indigo-deep); color:#fff; font-size:9.5px; padding:4px 3px; font-weight:700; text-align:left; white-space:nowrap; letter-spacing:.02em;}
+table.abdfit td{border-top:1px solid var(--line); padding:3px; vertical-align:middle; word-break:break-word;}
+table.abdfit td.c-star{text-align:center; color:var(--indigo-deep); font-size:13px; font-weight:800; padding:3px 0;}
+table.abdfit input, table.abdfit textarea{width:100%; padding:5px 4px; font-size:11px; border:1px solid var(--line); border-radius:7px; background:var(--soft); min-height:0; line-height:1.45;}
+table.abdfit textarea{resize:none; overflow:hidden; display:block;}
+table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--red); border-radius:6px; width:100%; padding:6px 0; font-size:11px; cursor:pointer;}
 .wk-note{font-size:11px; color:#A9B4BF; line-height:1.7; margin:14px 2px; white-space:pre-wrap;}
 @media (prefers-reduced-motion: reduce){*{animation:none!important; transition:none!important;}}
 .auth-screen{position:fixed; inset:0; z-index:100; background:var(--paper);
@@ -1897,7 +1895,7 @@ function addPerson(recId,listField){
 function abdSnapshot(){
   return state.apos.filter(a=>(Number(a.count)||1)===1&&['A','B','D'].includes(a.abcd)) /* 1回目のアポのみ・複製した2回目以降は同一人物なので除外 */
     .slice().sort((a,b)=>a.updatedAt-b.updatedAt)
-    .map(a=>({grp:a.abcd,name:a.name||'',age:a.age!==''?String(grownNumber(a.age,a.ageYear)):'',job:joinVal(a.jobSel,a.job),dev:joinVal(a.devSel,a.dev),memo:''}));
+    .map(a=>({grp:a.abcd,star:a.star||'',name:a.name||'',age:a.age!==''?String(grownNumber(a.age,a.ageYear)):'',job:joinVal(a.jobSel,a.job),dev:joinVal(a.devSel,a.dev),memo:''}));
 }
 function addPersonGrp(recId,grp,listField){
   listField=listField||'abdList';
@@ -1911,21 +1909,20 @@ function abdGroupsHtml(recId,list,listField){
   const order=[['A','A'],['B','B'],['D','D']];
   const groups={A:[],B:[],D:[]};
   (list||[]).forEach((p,i)=>{const g=(p.grp==='A'||p.grp==='B'||p.grp==='D')?p.grp:'A';groups[g].push({p,i});});
-  const metaCols=[['age','年齢'],['job','仕事'],['dev','開発の有無']];
+  const metaCols=['name','age','job','dev'];
   return order.map(([g])=>{
     const arr=groups[g];
     return '<div class="section-label abcd-tag-'+g+'" style="margin-top:14px">'+g+'（'+arr.length+'人）</div>'+
-      (arr.length?arr.map(({p,i})=>
-        '<div class="abd-card">'+
-          '<button class="abd-del" onclick="removePerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+')" aria-label="削除">🗑</button>'+
-          '<div class="abd-line"><span class="abd-star">★</span>'+
-            '<input class="abd-name" type="text" value="'+esc(p.name||'')+'" placeholder="名前" oninput="setPerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+',&#39;name&#39;,this.value)"></div>'+
-          '<div class="abd-meta">'+
-            metaCols.map(([f,lb])=>'<label class="abd-mini"><span>'+lb+'</span><input type="text" value="'+esc(p[f]||'')+'" oninput="setPerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+',&#39;'+f+'&#39;,this.value)"></label>').join('')+
-          '</div>'+
-          '<label class="abd-memo"><span>自由記入欄</span>'+
-            '<textarea oninput="setPerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+',&#39;memo&#39;,this.value)">'+esc(p.memo||'')+'</textarea></label>'+
-        '</div>').join('')
+      (arr.length?'<div class="abdfit-wrap"><table class="abdfit">'+
+        '<colgroup><col class="c-star"><col class="c-name"><col class="c-age"><col class="c-job"><col class="c-dev"><col class="c-memo"><col class="c-del"></colgroup>'+
+        '<tr><th></th><th>名前</th><th>年齢</th><th>仕事</th><th>開発</th><th>自由記入欄</th><th></th></tr>'+
+        arr.map(({p,i})=>'<tr>'+
+          '<td class="c-star">'+esc(p.star||'')+'</td>'+
+          metaCols.map(f=>'<td><input type="text" value="'+esc(p[f]||'')+'" oninput="setPerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+',&#39;'+f+'&#39;,this.value)"></td>').join('')+
+          '<td><textarea rows="1" oninput="setPerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+',&#39;memo&#39;,this.value)">'+esc(p.memo||'')+'</textarea></td>'+
+          '<td class="c-del"><button onclick="removePerson(&#39;'+recId+'&#39;,&#39;'+listField+'&#39;,'+i+')" aria-label="削除">🗑</button></td>'+
+        '</tr>').join('')+
+      '</table></div>'
       :'<div class="empty" style="padding:10px">まだいません</div>')+
       '<div class="btn-row"><button class="btn ghost small" onclick="addPersonGrp(&#39;'+recId+'&#39;,&#39;'+g+'&#39;,&#39;'+listField+'&#39;)">＋ '+g+'に追加</button></div>';
   }).join('');
@@ -1937,6 +1934,9 @@ function addMtg(){
   const curNames=new Set(curAbd.map(p=>p.name).filter(Boolean));
   /* 前回のToDo：今もアポ管理でABDの同一人物のみ、前回の自由記入欄の内容を引き継ぐ */
   const prevTodo=prev?JSON.parse(JSON.stringify((prev.abdList||[]).filter(p=>p.name&&curNames.has(p.name)))):[];
+  /* 前回のToDoの★も現在のアポ管理の状態（★稼働中/☆参画予定/なし）を反映 */
+  const starMap={}; curAbd.forEach(p=>{if(p.name)starMap[p.name]=p.star||'';});
+  prevTodo.forEach(p=>{if(p.name)p.star=starMap[p.name]||'';});
   /* 前回のToDoの自由記入欄の内容を、ABDの人を箇条書きへの自由記入欄にも反映（同一人物ごと） */
   const todoMemo=memoMapFromList(prevTodo);
   curAbd.forEach(p=>{if(p.name&&todoMemo[p.name])p.memo=todoMemo[p.name];});
