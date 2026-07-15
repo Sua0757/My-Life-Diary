@@ -54,7 +54,7 @@
   --hdr-shadow:rgba(96,80,220,.30); --accent-glow:rgba(96,90,255,.28);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;}
+html,body{margin:0;padding:0; -webkit-text-size-adjust:100%; text-size-adjust:100%;}
 body{
   background:var(--paper);
   background-image:radial-gradient(1200px 500px at 100% -10%, var(--glow-a), transparent 60%),
@@ -302,6 +302,7 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .a4 .gline{border-bottom:1px solid #777;padding:0 3px;}
 .a4 .a4goal{font-size:12.5px;margin:3px 0;font-weight:700;line-height:1.5;}
 .a4 .a4goal .gline{font-size:12.5px;min-width:220px;}
+.a4, .a4 *{-webkit-text-size-adjust:100%!important; text-size-adjust:100%!important;}
 .a4 .cols{display:flex;gap:16px;margin-top:10px;flex:1;align-items:stretch;}
 .a4 .colL{width:45%;display:flex;flex-direction:column;}.a4 .colR{flex:1;display:flex;flex-direction:column;}
 .a4 .slotlist{display:flex;flex-direction:column;flex:1;}
