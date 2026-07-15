@@ -423,6 +423,10 @@ table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--
 /* ============================================================
    My Life手帳 — オフライン対応・複数端末同期版
    ============================================================ */
+/* ---------- サービスワーカー登録（オフライン起動用） ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 /* ---------- Supabase 接続設定 ---------- */
 const SUPABASE_URL='https://zgeakzkwqwcmiuvgjmwy.supabase.co';
 const SUPABASE_KEY='sb_publishable_bYT80ObOGgiAViVQuVXISA_TlhWrxsU';
