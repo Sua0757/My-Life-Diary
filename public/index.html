@@ -2162,8 +2162,8 @@ async function createShareLink(){
   if(!token)token=randToken();
   try{
     const {error}=await sb.from('shares').upsert({token,user_id:currentUser.id},{onConflict:'token'});
-    if(error){toast('リンク作成に失敗しました');return;}
-  }catch(e){toast('リンク作成に失敗しました');return;}
+    if(error){console.error('share upsert error',error);toast('リンク作成に失敗：'+(error.message||error.code||error.hint||'原因不明'));return;}
+  }catch(e){console.error('share upsert exception',e);toast('リンク作成に失敗：'+(e&&e.message?e.message:e));return;}
   if(!state.ui)state.ui={};
   state.ui.shareToken=token; save();
   openSettings(); /* 設定画面を開き直してリンクを表示 */
