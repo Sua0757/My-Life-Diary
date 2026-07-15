@@ -295,11 +295,15 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .ev-opt.on::after{content:"✓"; position:absolute; top:-7px; right:-7px; width:20px; height:20px; border-radius:50%; background:var(--grad); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px var(--accent-glow);}
 /* --- A4プレビュー --- */
 #a4wrap{width:100%;overflow:hidden;}
-.a4{width:794px;min-height:1123px;background:#fff;border:1px solid #ccc;box-shadow:0 3px 14px rgba(0,0,0,.15);padding:36px;transform-origin:top left;color:#1b1b1b;font-size:11.5px;line-height:1.55;}
+.a4{width:794px;min-height:1123px;background:#fff;border:1px solid #ccc;box-shadow:0 3px 14px rgba(0,0,0,.15);padding:36px;transform-origin:top left;color:#1b1b1b;font-size:11.5px;line-height:1.55;display:flex;flex-direction:column;}
 .a4 .a4head{font-size:14px;font-weight:800;margin-bottom:6px;}
 .a4 .gline{border-bottom:1px solid #777;padding:0 3px;}
-.a4 .cols{display:flex;gap:16px;margin-top:10px;}
-.a4 .colL{width:45%;}.a4 .colR{flex:1;}
+.a4 .cols{display:flex;gap:16px;margin-top:10px;flex:1;align-items:stretch;}
+.a4 .colL{width:45%;display:flex;flex-direction:column;}.a4 .colR{flex:1;display:flex;flex-direction:column;}
+.a4 .slotlist{display:flex;flex-direction:column;flex:1;}
+.a4 .slotlist .srow{flex:1;}
+.a4 .grow{flex:1;display:flex;flex-direction:column;}
+.a4 .grow .redtxt{flex:1;}
 .a4 h5{background:#2C6FBE;color:#fff;display:inline-block;padding:1px 10px;border-radius:4px;margin:9px 0 4px;font-size:11px;letter-spacing:.06em;font-weight:700;}
 .a4 .srow{display:flex;border-bottom:1px dotted #999;align-items:flex-end;min-height:17px;}
 .a4 .srow .st{width:46px;font-weight:700;color:#2C6FBE;font-size:10px;}
@@ -1586,7 +1590,7 @@ function a4View(date){
         '<h5>スケジュール</h5>'+
         '<div style="font-size:10.5px">昨日の就寝時間：'+esc(s.sleep||'　　　')+'　起床時間：'+esc(s.wake||'　　　')+'<br>始業時間：'+esc(s.startW||'　　　')+'　終業時間：'+esc(s.endW||'　　　')+'</div>'+
         '<div class="srow" style="border-bottom:none"><span class="st"></span><span class="sv" style="font-size:9px;color:#2C6FBE;font-weight:700">予定</span><span class="sv sred" style="font-size:9px;font-weight:700">変更</span><span class="sabc" style="font-size:9px">ABC</span></div>'+
-        tpl.timeSlots.map(t=>'<div class="srow"><span class="st">'+esc(t)+'-</span><span class="sv"'+((s.slotStrike||{})[t]?' style="text-decoration:line-through;color:#999"':'')+'>'+esc(s.slots[t]||'')+'</span><span class="sv sred">'+esc((s.slotsRed||{})[t]||'')+'</span><span class="sabc">'+esc(abc[t]||'')+'</span></div>').join('')+
+        '<div class="slotlist">'+tpl.timeSlots.map(t=>'<div class="srow"><span class="st">'+esc(t)+'-</span><span class="sv"'+((s.slotStrike||{})[t]?' style="text-decoration:line-through;color:#999"':'')+'>'+esc(s.slots[t]||'')+'</span><span class="sv sred">'+esc((s.slotsRed||{})[t]||'')+'</span><span class="sabc">'+esc(abc[t]||'')+'</span></div>').join('')+'</div>'+
       '</div>'+
       '<div class="colR">'+
         '<h5>'+esc(tpl.todo1Title||'毎日ToDo')+'</h5>'+
@@ -1603,7 +1607,7 @@ function a4View(date){
         '<div style="font-size:10.5px">今日の達成度：'+circ(s.ach10)+'</div>'+
         (s.scoreWhy?'<div class="pre" style="font-size:10.5px">達成度の結果の原因：'+esc(s.scoreWhy)+'</div>':'')+
         '<div style="margin-top:4px"><b>《'+esc(tpl.apoListTitle||'今日のアポした人リスト')+'》</b><div class="pre">'+esc(s.apoList||'')+'</div></div>'+
-        '<div style="margin-top:4px"><b>《３行日報 気付きなども》</b><div class="redtxt">'+esc(s.diary||'')+'</div></div>'+
+        '<div class="grow" style="margin-top:4px"><b>《３行日報 気付きなども》</b><div class="redtxt">'+esc(s.diary||'')+'</div></div>'+
         (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><b>《'+esc(cf)+'》</b><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
       '</div>'+
     '</div>'+
@@ -1627,8 +1631,8 @@ function printA4(){
     '<meta name="viewport" content="width=device-width, initial-scale=1">'+
     '<title>スケジュールシート</title><style>'+css+'</style>'+
     '<style>body{background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'+
-    '#pw{overflow:visible;}#pw .a4{transform:none!important;border:none;box-shadow:none;width:auto;min-height:auto;padding:0;margin:0 auto;}'+
-    '@page{size:A4;margin:10mm;}'+
+    '#pw{overflow:visible;}#pw .a4{transform:none!important;border:none;box-shadow:none;width:210mm;min-height:297mm;padding:12mm;margin:0 auto;box-sizing:border-box;}'+
+    '@page{size:A4;margin:0;}'+
     '.pbar{position:sticky;top:0;display:flex;gap:8px;padding:10px;background:#fff;border-bottom:1px solid #ddd;font-family:sans-serif;}'+
     '.pbar button{flex:1;padding:11px;font-size:15px;font-weight:700;border:none;border-radius:10px;background:#F26A2E;color:#fff;}'+
     '@media print{.pbar{display:none!important;}}</style></head><body>'+
