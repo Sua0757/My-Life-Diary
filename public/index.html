@@ -1288,7 +1288,7 @@ function manageView(){
   }
   return '<h2 class="page">アポ管理 <small>全'+apos.length+'件・更新が新しい順</small></h2>'+
     '<div class="seg"><button class="'+(mode==='order'?'on':'')+'" onclick="state.ui.mngView=\'order\';save();render()">更新順リスト</button><button class="'+(mode==='abcd'?'on':'')+'" onclick="state.ui.mngView=\'abcd\';save();render()">ABCD別リスト</button></div>'+
-    '<p class="hint" style="margin-bottom:8px">1回目のアポの方のみ一覧に表示されます（複製で作った2回目以降のアポは、同じ方としてすでに載っているため表示されません）。<br>A：紹介済み　B：紹介末/いい人　C：今は違う/断られた　D：FPでアプローチ<br>表は横にスクロールできます。ABCD・直紹介・イベント・スキルシートは表の中で直接変更できます。</p>'+
+    '<p class="hint" style="margin-bottom:8px">1回目のアポの方のみ一覧に表示されます（複製で作った2回目以降のアポは、同じ方としてすでに載っているため表示されません）。<br>★：稼働中　☆：参画予定<br>A：紹介済み　B：紹介末/いい人　C：今は違う/断られた　D：FPでアプローチ<br>表は横にスクロールできます。ABCD・直紹介・イベント・スキルシートは表の中で直接変更できます。</p>'+
     body;
 }
 
