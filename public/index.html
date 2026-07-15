@@ -620,6 +620,22 @@ function toggleVoice(btn,targetId){
 function autoGrow(el){el.style.height='auto';el.style.height=(el.scrollHeight+2)+'px';}
 function growAll(){document.querySelectorAll('textarea').forEach(t=>{t.style.overflow='hidden';autoGrow(t);});}
 document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA')autoGrow(e.target);});
+/* エンターで次の入力欄へ移動（スケジュールの予定・変更／目標などの数字表） */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.isComposing)return; /* 日本語変換中は無視 */
+  const el=e.target;
+  if(!el||el.tagName!=='INPUT')return;
+  const slot=el.closest('.slot-row');
+  const goalTbl=el.closest('table.goal');
+  if(!slot&&!goalTbl)return;
+  e.preventDefault();
+  const scope=slot?document.querySelectorAll('.slot-row input:not([type=checkbox])')
+                  :goalTbl.querySelectorAll('input:not([type=checkbox])');
+  const list=Array.from(scope);
+  const i=list.indexOf(el);
+  if(i>=0&&i<list.length-1){const n=list[i+1];n.focus();try{n.select();}catch(_){}}
+  else el.blur();
+});
 
 /* ---------- モーダル ---------- */
 function openModal(html){$('#modalRoot').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">'+html+'</div></div>';}
