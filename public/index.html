@@ -1157,7 +1157,8 @@ function refShareText(id){
     if(joinVal(r.nextActionSel,r.nextAction))L.push('・次のアクション：'+joinVal(r.nextActionSel,r.nextAction));
     if(r.resultSummary)L.push('・話した内容の概要：'+r.resultSummary);
   }
-  return L.join('\n');
+  /* 各欄の文末改行などで空白行が入らないよう、連続する改行を1つにまとめる */
+  return L.map(s=>String(s).replace(/\s+$/,'')).join('\n').replace(/\n{2,}/g,'\n').trim();
 }
 function copyRefShare(id){
   const t=refShareText(id);
