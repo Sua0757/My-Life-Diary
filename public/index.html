@@ -1313,12 +1313,21 @@ function setLG(id,f,v){
 }
 function delLG(id){askConfirm('この目標を削除しますか？',()=>{state.longGoals=state.longGoals.filter(x=>x.id!==id);save();render();});}
 const MG_ROWS=[['r1','❶参画数 ※決めた人'],['r2','❷スキルシート回収数'],['r3','❸紹介数（直紹介）'],['r4','　紹介数（イベント）'],['r5','❹アポ数（初アポ）'],['r6','　アポ数（2回目以降）'],['r7','❺外部イベント参加数']];
+/* 指定日の「翌月1日」を返す（YYYY-MM-DD） */
+function nextMonthFirst(dateStr){
+  const base=dateStr?new Date(dateStr+'T00:00:00'):new Date();
+  const d=new Date(base.getFullYear(), base.getMonth()+1, 1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
+}
 function addMonthlyGoal(){
   const rows={};MG_ROWS.forEach(([k])=>rows[k]={pg:'',pr:'',g:'',tp:''});
   /* 直近の月の目標表から「今月の目標(g)」を新しい表の「先月の目標(pg)」へ、「今月の進捗(tp)」を「先月の結果(pr)」へ引き継ぐ */
   const prev=state.monthlyGoals.slice().sort((a,b)=>(a.reviewDate||'').localeCompare(b.reviewDate||'')||a.createdAt-b.createdAt).pop();
   if(prev&&prev.rows){MG_ROWS.forEach(([k])=>{const pr=prev.rows[k]||{};rows[k].pg=pr.g||'';rows[k].pr=pr.tp||'';});}
-  state.monthlyGoals.push({id:uid(),reviewDate:today(),rows,reason:'',createdAt:Date.now()});
+  /* 既に表があれば、その次の月として作成。初回は今月 */
+  const reviewDate=prev?nextMonthFirst(prev.reviewDate||today()):today();
+  state.monthlyGoals.push({id:uid(),reviewDate,rows,reason:'',createdAt:Date.now()});
+  state.ui.goalMonth=monthKey(reviewDate); /* 追加した月に表示を切り替え */
   save();render();
 }
 function setMGReason(mgId,v){const m=state.monthlyGoals.find(x=>x.id===mgId); if(m){m.reason=v; save();}}
