@@ -1091,7 +1091,7 @@ function createRefFromApo(apoId){
   const r={
     id:uid(), createdAt:Date.now(), apoId:apoId,
     refDate:today(), place:'', originSel:'', jobExtra:'',
-    detail:summarizeApo(a), friendInfo:'', refLandingSel:'', refLanding:'',
+    detail:summarizeApo(a), friendInfo:'', request:'', refLandingSel:'', refLanding:'',
     resultLanding:'', nextActionSel:'', nextAction:'', resultSummary:''
   };
   state.referrals.push(r); save(); syncReferralRow(r.id);
@@ -1112,7 +1112,7 @@ function addRefPick(){
     }).join('')+
     '<div class="btn-row" style="margin-top:12px"><button class="btn subtle block" onclick="closeModal()">キャンセル</button></div>');
 }
-function setRef(id,field,value){const r=state.referrals.find(x=>x.id===id);if(!r)return;r[field]=value;save();clearTimeout(_refSyncTimers[id]);_refSyncTimers[id]=setTimeout(()=>syncReferralRow(id),400);}
+function setRef(id,field,value){const r=state.referrals.find(x=>x.id===id);if(!r)return;r[field]=value;save();const _p=document.getElementById('refprev_'+id);if(_p)_p.textContent=refShareText(id);clearTimeout(_refSyncTimers[id]);_refSyncTimers[id]=setTimeout(()=>syncReferralRow(id),400);}
 function deleteRef(id){askConfirm('この紹介者情報を削除しますか？',()=>{state.referrals=state.referrals.filter(x=>x.id!==id);save();deleteReferralRow(id);subView=null;render();});}
 function refTitle(r){
   const a=state.apos.find(x=>x.id===r.apoId)||{};
@@ -1149,6 +1149,7 @@ function refShareText(id){
   if(a.exp!=='')L.push('・経験年数：約'+grownNumber(a.exp,a.expYear)+'年');
   if(r.detail)L.push('・詳細：'+r.detail);
   if(r.friendInfo)L.push('・その他友人情報：'+r.friendInfo);
+  if(r.request)L.push('・要望：'+r.request);
   if(joinVal(r.refLandingSel,r.refLanding))L.push('・紹介の着地：'+joinVal(r.refLandingSel,r.refLanding));
   if(r.resultLanding||r.nextAction||r.nextActionSel||r.resultSummary){
     L.push('【紹介結果】');
@@ -1193,6 +1194,7 @@ function refFormView(id){
     F('詳細',vArea('r_detail_'+id,r.detail,'','', 'oninput="setRef(\''+id+'\',\'detail\',this.value)"'),'アポ記録の「着地」から要約を自動生成。文言の手直しもできます')+
     '<div class="btn-row"><button class="btn subtle small" onclick="setRef(\''+id+'\',\'detail\',summarizeApo(state.apos.find(x=>x.id===\''+r.apoId+'\')||{}));render()">↺ 最新の「着地」から要約を再生成</button></div>'+
     F('その他友人情報',vArea('r_friendInfo_'+id,r.friendInfo,'','', 'oninput="setRef(\''+id+'\',\'friendInfo\',this.value)"'))+
+    F('要望',vArea('r_request_'+id,r.request||'','','', 'oninput="setRef(\''+id+'\',\'request\',this.value)"'))+
     F('紹介の着地',selText('refLanding','refLandingSel','refLanding','紹介の着地'))+
     '<div class="section-label red">紹介結果（イベント後・紹介後）</div>'+
     F('着地',vText('r_resultLanding_'+id,r.resultLanding,'','oninput="setRef(\''+id+'\',\'resultLanding\',this.value)"'))+
@@ -1200,7 +1202,7 @@ function refFormView(id){
     F('話した内容の概要',vArea('r_resultSummary_'+id,r.resultSummary,'','', 'oninput="setRef(\''+id+'\',\'resultSummary\',this.value)"'))+
   '</div>'+
   '<div class="btn-row"><button class="btn primary block" onclick="copyRefShare(\''+id+'\')">📋 共有用テキストをコピー（コンサル仲間へ）</button></div>'+
-  '<div class="summary-box" style="margin-bottom:12px">'+esc(refShareText(id))+'</div>'+
+  '<div class="summary-box" id="refprev_'+id+'" style="margin-bottom:12px">'+esc(refShareText(id))+'</div>'+
   '<div class="btn-row"><button class="btn danger block" onclick="deleteRef(\''+id+'\')">削除</button></div>';
 }
 /* ============================================================
@@ -1508,7 +1510,7 @@ function sheetView(date){
     '<p class="hint">分は00・15・30・45から選べます。始業時間・終業時間と「今月の数字」の目標欄は、変更しない限り翌日以降のシートにも自動で引き継がれます。</p>'+
     '<div class="slot-row" style="border-bottom:none"><span class="t"></span><span style="flex:1;font-size:11px;font-weight:700;color:var(--indigo-deep)">予定</span><span style="flex:1;font-size:11px;font-weight:700;color:var(--red)">変更</span><span style="flex:none;width:96px;text-align:center;font-size:11px;font-weight:700;color:var(--red)">ABC</span></div>'+
     tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><input type="text" class="'+((s.slotStrike||{})[t]?'strike':'')+'" value="'+esc(s.slots[t]||'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" ondblclick="toggleSlotStrike(\''+date+'\',\''+esc(t)+'\')" onmousedown="if(event.detail>1)event.preventDefault()"><input type="text" class="slot-red" value="'+esc((s.slotsRed||{})[t]||'')+'" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)">'+abcBtns(date,t,abc[t]||'')+'</div>').join('')+
-    '<p class="hint" style="margin-top:6px">右の赤い欄には、振り返りで予定変更があった場合の実際の行動を記入します。</p>'+
+    '<p class="hint" style="margin-top:6px">右の赤い欄には、振り返りで予定変更があった場合の実際の行動を記入します。<br>ダブルタップすると予定の文字を線で消すことが可能です。元に戻す場合も、ダブルタップして下さい。</p>'+
     '<p class="hint" style="margin-top:8px">① 今日やるタスク全てに番号を振る ② 番号を元にスケジュールに記載 ③ 1日の最後に実際の行動を記入 ④ 各行動にABCを付ける<br>（A：目標に繋がる／B：繋がらない／C：繋がらないが生活に必要）</p>'+
   '</div>'+
   '<div class="card"><div class="section-label" style="margin-top:0">'+esc(tpl.todo1Title||'毎日ToDo')+'</div>'+
