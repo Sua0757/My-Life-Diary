@@ -1795,11 +1795,9 @@ function weeklyListView(){
     '<div class="btn-row"><button class="btn primary block" onclick="addWeekly()">＋ 今週の振り返りを追加</button></div>'+
     (all.length?monthPickerHtml(cur,months,'setWeeklyMonth'):'')+
     (list.length?list.map(w=>{
-      const r=(w.review||'').replace(/\s+/g,' ').trim();
       return '<div class="card tap" onclick="subView={type:\'weeklyForm\',id:\''+w.id+'\'};render();window.scrollTo(0,0)">'+
         '<button class="card-del" onclick="event.stopPropagation();deleteWeekly(\''+w.id+'\')" aria-label="削除">🗑</button>'+
-        '<div class="rec-title" style="font-size:15px">'+(w.periodStart?fmtDate(w.periodStart):'未定')+'　～　'+(w.periodEnd?fmtDate(w.periodEnd):'未定')+'</div>'+
-        (r?'<div class="rec-sub">'+esc(r.length>60?r.slice(0,60)+'…':r)+'</div>':'')+
+        '<div class="rec-title" style="font-size:15px;padding-right:40px">'+(w.periodStart?fmtDate(w.periodStart):'未定')+'　～　'+(w.periodEnd?fmtDate(w.periodEnd):'未定')+'</div>'+
         '</div>';
     }).join(''):'<div class="empty">'+(all.length?monthLabel(cur)+'の週次振り返りはありません。<br>上の📅で他の月を選べます。':'まだ週次振り返りがありません。<br>「＋」で今週分を作成しましょう。')+'</div>');
 }
