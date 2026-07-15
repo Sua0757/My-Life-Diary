@@ -151,6 +151,7 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .due-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; position:relative;}
 .due-val{font-weight:800; color:var(--indigo-ink); font-size:15px;}
 .due-hidden{position:absolute; opacity:0; width:1px; height:1px; padding:0; border:none; pointer-events:none;}
+.due-input{max-width:200px; font-weight:700;}
 
 /* 長期目標の折りたたみ（一文タップで期限・目標を編集） */
 .lg-head{display:flex; align-items:center; gap:10px; cursor:pointer; padding:2px 0; user-select:none;}
@@ -351,6 +352,13 @@ table.abdfit td.c-star{text-align:center; color:var(--indigo-deep); font-size:14
 table.abdfit input, table.abdfit textarea{width:100%; padding:5px 4px; font-size:13px; border:1px solid var(--line); border-radius:7px; background:var(--soft); min-height:0; line-height:1.45;}
 table.abdfit textarea{resize:none; overflow:hidden; display:block;}
 table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--red); border-radius:6px; width:100%; padding:6px 0; font-size:11px; cursor:pointer;}
+/* スマホでは横スクロールで全項目を余裕をもって見られるようにする */
+@media (max-width:560px){
+  .abdfit-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1.5px solid var(--line); border-radius:var(--radius);}
+  table.abdfit{min-width:600px; border:none; border-radius:0;}
+  table.abdfit col.c-name{width:120px;} table.abdfit col.c-job{width:96px;} table.abdfit col.c-dev{width:110px;}
+  table.abdfit th, table.abdfit input, table.abdfit textarea{font-size:13.5px;}
+}
 .wk-note{font-size:11px; color:#A9B4BF; line-height:1.7; margin:14px 2px; white-space:pre-wrap;}
 @media (prefers-reduced-motion: reduce){*{animation:none!important; transition:none!important;}}
 .auth-screen{position:fixed; inset:0; z-index:100; background:var(--paper);
@@ -1400,11 +1408,10 @@ function goalView(){
     (open?
       '<div class="field" style="margin-top:10px"><label>期限（この日までに）</label>'+
         '<div class="due-row">'+
-          '<span class="due-val">'+(g.due?esc(slashDate(g.due)):'未設定')+'</span>'+
-          '<button type="button" class="btn subtle small" onclick="pickDue(\''+g.id+'\')">📅 カレンダーで選ぶ</button>'+
+          '<input type="date" id="due_'+g.id+'" class="due-input" value="'+esc(g.due)+'" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+
           (g.due?'<button type="button" class="btn danger small" onclick="setLG(\''+g.id+'\',\'due\',\'\');render()">✕ クリア</button>':'')+
-          '<input type="date" id="due_'+g.id+'" value="'+esc(g.due)+'" class="due-hidden" onchange="setLG(\''+g.id+'\',\'due\',this.value);render()">'+
-        '</div></div>'+
+        '</div>'+
+        '<p class="hint" style="margin-top:4px">日付の欄をタップするとカレンダーが開きます。空欄のままにもできます。</p></div>'+
       '<div class="field"><label>目標</label><div class="voice-wrap"><textarea id="lg_'+g.id+'" placeholder="" oninput="setLG(\''+g.id+'\',\'text\',this.value)">'+esc(g.text)+'</textarea>'+micBtn('lg_'+g.id)+'</div></div>'
     :'')+
     '</div>';
@@ -1487,6 +1494,18 @@ function toggleSlotStrike(date,t){
   save();
   if(subView&&subView.type==='sheet'&&subView.date===date)render();
 }
+/* スマホでもダブルタップで取り消し線を引けるように、二回タップを自前で検出 */
+let _slotTap={key:'',t:0};
+function slotTapToggle(date,t,ev){
+  const key=date+'|'+t, now=Date.now();
+  if(_slotTap.key===key && now-_slotTap.t<350){
+    _slotTap={key:'',t:0};
+    if(ev&&ev.cancelable)ev.preventDefault();
+    toggleSlotStrike(date,t);
+  }else{
+    _slotTap={key:key,t:now};
+  }
+}
 function setSheetCustom(date,i,v){const s=ensureSheet(date);const label=(state.scheduleTemplate.customFields||[])[i];if(label==null)return;if(!s.custom)s.custom={};s.custom[label]=v;save();}
 function setSheetScale(date,f,v){const s=ensureSheet(date);s[f]=v;save();render();}
 function deleteSheet(date){askConfirm(fmtDate(date)+' のシートを削除しますか？',()=>{delete state.schedules[date];save();subView=null;render();});}
@@ -1556,7 +1575,7 @@ function sheetView(date){
     F('終業時間',timeSel(date,'endW',s.endW))+'</div>'+
     '<p class="hint">分は00・15・30・45から選べます。始業時間・終業時間と「今月の数字」の目標欄は、変更しない限り翌日以降のシートにも自動で引き継がれます。</p>'+
     '<div class="slot-row" style="border-bottom:none"><span class="t"></span><span style="flex:1;font-size:11px;font-weight:700;color:var(--indigo-deep)">予定</span><span style="flex:1;font-size:11px;font-weight:700;color:var(--red)">変更</span><span style="flex:none;width:96px;text-align:center;font-size:11px;font-weight:700;color:var(--red)">ABC</span></div>'+
-    tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><input type="text" class="'+((s.slotStrike||{})[t]?'strike':'')+'" value="'+esc(s.slots[t]||'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" ondblclick="toggleSlotStrike(\''+date+'\',\''+esc(t)+'\')" onmousedown="if(event.detail>1)event.preventDefault()"><input type="text" class="slot-red" value="'+esc((s.slotsRed||{})[t]||'')+'" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)">'+abcBtns(date,t,abc[t]||'')+'</div>').join('')+
+    tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><input type="text" class="'+((s.slotStrike||{})[t]?'strike':'')+'" value="'+esc(s.slots[t]||'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" onpointerup="slotTapToggle(\''+date+'\',\''+esc(t)+'\',event)" onmousedown="if(event.detail>1)event.preventDefault()"><input type="text" class="slot-red" value="'+esc((s.slotsRed||{})[t]||'')+'" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)">'+abcBtns(date,t,abc[t]||'')+'</div>').join('')+
     '<p class="hint" style="margin-top:6px">右の赤い欄には、振り返りで予定変更があった場合の実際の行動を記入します。<br>ダブルタップすると予定の文字を線で消すことが可能です。元に戻す場合も、ダブルタップして下さい。</p>'+
     '<p class="hint" style="margin-top:8px">① 今日やるタスク全てに番号を振る ② 番号を元にスケジュールに記載 ③ 1日の最後に実際の行動を記入 ④ 各行動にABCを付ける<br>（A：目標に繋がる／B：繋がらない／C：繋がらないが生活に必要）</p>'+
   '</div>'+
@@ -1599,8 +1618,6 @@ function a4View(date){
   const circ=(val)=>{let o='';for(let i=1;i<=10;i++)o+=(Number(val)===i?'<span class="cmark">'+i+'</span>':i)+'&nbsp;&nbsp;';return o;};
   const gl=(label,val)=>'<div style="margin:2px 0"><b>'+label+'</b>『<span class="gline" style="display:inline-block;min-width:200px;white-space:pre-wrap;vertical-align:top">'+esc(val||'')+'</span>』</div>';
   return '<button class="back no-print" onclick="subView={type:\'sheet\',date:\''+date+'\'};render();window.scrollTo(0,0)">← 記入画面に戻る</button>'+
-  '<div class="btn-row no-print"><button class="btn primary block" onclick="printA4()">🖨 印刷・PDFに保存</button></div>'+
-  '<p class="hint no-print" style="margin-bottom:10px">ボタンを押すと内容だけの印刷画面が開きます。そこで「PDFに保存」を選ぶとA4のPDFになります。</p>'+
   '<div id="a4wrap"><div class="a4" id="a4paper">'+
     '<div class="a4head">'+fmtDate(date)+'</div>'+
     gl('長期目標　',s.longGoal)+gl('今月の目標',s.monthGoal)+gl('今日の目標',s.todayGoal)+
@@ -1630,7 +1647,9 @@ function a4View(date){
         (tpl.customFields||[]).map(cf=>'<div style="margin-top:4px"><b>《'+esc(cf)+'》</b><div class="pre">'+esc((s.custom||{})[cf]||'')+'</div></div>').join('')+
       '</div>'+
     '</div>'+
-  '</div></div>';
+  '</div></div>'+
+  '<div class="btn-row no-print" style="margin-top:12px"><button class="btn primary block" onclick="printA4()">🖨 印刷・PDFに保存</button></div>'+
+  '<p class="hint no-print">ボタンを押すと内容だけの印刷画面が開きます。そこで「PDFに保存」を選ぶとA4のPDFになります。</p>';
 }
 function fitA4(){
   const w=document.getElementById('a4wrap'), p=document.getElementById('a4paper');
