@@ -53,6 +53,26 @@
   --focus-ring:rgba(84,104,255,.20); --on-grad-tsh:rgba(20,30,80,.22);
   --hdr-shadow:rgba(96,80,220,.30); --accent-glow:rgba(96,90,255,.28);
 }
+/* 緑（グリーン）テーマ：緑＋白基調。data-theme="green" */
+:root[data-theme="green"]{
+  --paper:#F3F9F4; --card:#FFFFFF; --ink:#122419; --sub:#4B5F52;
+  --line:#DDEBE0; --indigo:#3E9B5F; --indigo-deep:#2E7D48; --indigo-ink:#256B3C; --indigo-bg:#E4F3E9;
+  --coral:#E4863B; --coral-bg:#FBEEDF;
+  --red:#E5484D; --red-bg:#FDECEC; --amber:#C77D0A; --amber-bg:#FCF2DD;
+  --green:#2E7D48; --green-bg:#E2F3E7;
+  --grad:linear-gradient(135deg,#57AE70 0%,#2E7D48 100%);
+  --grad-header:linear-gradient(115deg,#63B27C 0%,#3E9B5F 55%,#2E7D48 100%);
+  --grad-warm:linear-gradient(135deg,#7FC98F 0%,#3E9B5F 100%);
+  --shadow:0 1px 2px rgba(30,70,45,.06), 0 6px 20px rgba(30,70,45,.07);
+  --shadow-lg:0 10px 32px rgba(30,80,50,.14);
+  --shadow-btn:0 5px 14px rgba(46,125,72,.30);
+  --glow-a:rgba(99,178,124,.12); --glow-b:rgba(62,155,95,.08);
+  --glow-auth-a:rgba(99,178,124,.20); --glow-auth-b:rgba(62,155,95,.15);
+  --soft:#F6FBF7; --soft2:#F1FAF3; --soft3:#FAFEFB;
+  --seg-bg:#DEEDE2; --chip-bg:#E7F3EB; --chip-ink:#3D5A47;
+  --focus-ring:rgba(62,155,95,.22); --on-grad-tsh:rgba(12,40,24,.22);
+  --hdr-shadow:rgba(46,125,72,.30); --accent-glow:rgba(62,155,95,.26);
+}
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0; -webkit-text-size-adjust:100%; text-size-adjust:100%;}
 body{
@@ -1770,8 +1790,9 @@ function openSettings(){
   '<div class="field"><label>ログイン中のアカウント</label><div class="summary-box">'+esc(email)+'</div></div>'+
   '<div class="field"><label>デザインの色（テーマ）</label>'+
   '<div class="seg">'+
-    '<button class="'+(th==='warm'?'on':'')+'" onclick="setTheme(\'warm\')">☀️ 暖色（元気）</button>'+
-    '<button class="'+(th==='cool'?'on':'')+'" onclick="setTheme(\'cool\')">💧 寒色（クール）</button>'+
+    '<button class="'+(th==='warm'?'on':'')+'" onclick="setTheme(\'warm\')">☀️ 暖色</button>'+
+    '<button class="'+(th==='cool'?'on':'')+'" onclick="setTheme(\'cool\')">💧 寒色</button>'+
+    '<button class="'+(th==='green'?'on':'')+'" onclick="setTheme(\'green\')">🌿 グリーン</button>'+
   '</div>'+
   '<p class="hint">お好みの色を選べます。この設定はログイン中のアカウントに保存され、どの端末でも同じ色で表示されます。</p></div>'+
   '<div class="field"><label>文字サイズ</label>'+
@@ -1820,7 +1841,7 @@ function setFontSize(fs){
 }
 function applyTheme(){
   const th=(state.ui&&state.ui.theme)||'warm';
-  if(th==='cool') document.documentElement.setAttribute('data-theme','cool');
+  if(th==='cool'||th==='green') document.documentElement.setAttribute('data-theme',th);
   else document.documentElement.removeAttribute('data-theme');
 }
 function setTheme(th){
