@@ -288,6 +288,13 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .toast.has-undo{pointer-events:auto; white-space:normal; display:flex; gap:12px; align-items:center; max-width:calc(100vw - 32px); padding:8px 8px 8px 16px;}
 .toast .undo-btn{background:rgba(255,255,255,.22); border:none; color:#fff; font-weight:800; padding:6px 14px; border-radius:999px; cursor:pointer; font-size:13px; flex:none;}
 .toast .undo-btn:active{background:rgba(255,255,255,.35);}
+.trash-list{display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow-y:auto;}
+.trash-row{display:flex; align-items:center; gap:10px; background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:8px 10px;}
+.trash-info{flex:1; min-width:0;}
+.trash-title{font-weight:800; font-size:calc(13px * var(--fs,1));}
+.trash-sub{font-size:calc(11px * var(--fs,1)); color:var(--sub); line-height:1.5; word-break:break-word;}
+.trash-acts{display:flex; flex-direction:column; gap:6px; flex:none;}
+.trash-acts .btn{white-space:nowrap;}
 .toast.show{opacity:1;}
 .back{position:sticky; top:calc(46px + env(safe-area-inset-top)); z-index:19; display:inline-flex; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--shadow); color:var(--indigo-ink); font-size:13px; font-weight:800; cursor:pointer; padding:8px 15px; margin-bottom:12px; border-radius:999px; font-family:inherit;}
 .back:active{transform:translateY(1px);}
@@ -647,7 +654,7 @@ function defaultState(){
       todo2:['❶X投稿50件'],
       metrics:['紹介数（イベント動員数含む）','金塚さんに繋げる提案数','親友アポ数','LINE交換数','①SE外アポ数','②SEアポ数','アポ数合計（①②）']
     },
-    longGoals:[], yearStartGoals:[], monthlyGoals:[], weeklyReviews:[], mtgs:[],
+    longGoals:[], yearStartGoals:[], monthlyGoals:[], weeklyReviews:[], mtgs:[], trash:[],
     carry:{longGoal:'', monthGoal:'', startW:'', endW:'', metricGoals:{}},
     ui:{apoView:'month', mngView:'order', fontSize:'small'}
   };
@@ -682,6 +689,75 @@ function showUndo(msg,restoreFn){
   t.classList.add('show','has-undo');
   window.__undoNow=function(){ clearTimeout(t._tm); t.classList.remove('show','has-undo'); t.innerHTML=''; window.__undoNow=null; try{restoreFn();}catch(e){} };
   t._tm=setTimeout(()=>{ t.classList.remove('show','has-undo'); t.innerHTML=''; window.__undoNow=null; }, 7000);
+}
+/* ====== ゴミ箱（削除を数日間保管して復元できるように） ====== */
+const TRASH_DAYS=7;
+function purgeTrash(){
+  if(!state.trash)return;
+  const cutoff=Date.now()-TRASH_DAYS*86400000;
+  const before=state.trash.length;
+  state.trash=state.trash.filter(t=>(t.deletedAt||0)>cutoff);
+  if(state.trash.length!==before)save();
+}
+function restoreByKind(kind,p){
+  switch(kind){
+    case 'apo': if(!state.apos.some(x=>x.id===p.id))state.apos.push(p); syncApoRow(p.id); break;
+    case 'referral': if(!state.referrals.some(x=>x.id===p.id))state.referrals.push(p); syncReferralRow(p.id); break;
+    case 'sheet': state.schedules[p.date]=p.sheet; break;
+    case 'monthlyGoal': if(!state.monthlyGoals.some(x=>x.id===p.id))state.monthlyGoals.push(p); break;
+    case 'longGoal': if(!(state.longGoals||[]).some(x=>x.id===p.id)){state.longGoals=state.longGoals||[];state.longGoals.push(p);} break;
+    case 'yearStartGoal': if(!(state.yearStartGoals||[]).some(x=>x.id===p.id)){state.yearStartGoals=state.yearStartGoals||[];state.yearStartGoals.push(p);} break;
+    case 'mtg': if(!state.mtgs.some(x=>x.id===p.id))state.mtgs.push(p); break;
+    case 'weekly': if(!state.weeklyReviews.some(x=>x.id===p.id))state.weeklyReviews.push(p); break;
+    case 'person': { const m=state.mtgs.find(x=>x.id===p.recId); if(m){ if(!m[p.listField])m[p.listField]=[]; m[p.listField].push(p.person);} break; }
+  }
+}
+/* 削除の共通処理：状態から消す→ゴミ箱に保管→「元に戻す」トースト */
+function softDelete(kind,label,payload,removeFn){
+  removeFn();
+  if(!state.trash)state.trash=[];
+  const tid=uid();
+  state.trash.push({tid,kind,label,payload,deletedAt:Date.now()});
+  save(); render();
+  showUndo((label||'項目')+'を削除しました',()=>{
+    state.trash=state.trash.filter(t=>t.tid!==tid);
+    restoreByKind(kind,payload); save(); render();
+  });
+}
+function restoreTrash(tid){
+  const t=(state.trash||[]).find(x=>x.tid===tid); if(!t)return;
+  state.trash=state.trash.filter(x=>x.tid!==tid);
+  restoreByKind(t.kind,t.payload); save();
+  toast('復元しました'); openTrash();
+}
+function purgeTrashItem(tid){
+  askConfirm('この項目を完全に削除しますか？（もう元に戻せません）',()=>{
+    state.trash=(state.trash||[]).filter(x=>x.tid!==tid); save(); openTrash();
+  });
+}
+function emptyTrash(){
+  askConfirm('ゴミ箱を空にしますか？（すべて完全に削除され、元に戻せません）',()=>{
+    state.trash=[]; save(); openTrash();
+  });
+}
+const TRASH_KIND_LABEL={apo:'アポ記録',referral:'紹介者情報',sheet:'スケジュール',monthlyGoal:'今月の目標表',longGoal:'長期目標',yearStartGoal:'年度初めの目標',mtg:'個別MTG',weekly:'週次振り返り',person:'MTGの箇条書き'};
+function openTrash(){
+  purgeTrash();
+  const items=(state.trash||[]).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
+  const rows=items.length?items.map(t=>{
+    const days=Math.max(0,TRASH_DAYS-Math.floor((Date.now()-(t.deletedAt||0))/86400000));
+    return '<div class="trash-row">'+
+      '<div class="trash-info"><div class="trash-title">'+esc(TRASH_KIND_LABEL[t.kind]||t.kind)+'</div>'+
+      '<div class="trash-sub">'+esc(t.label||'')+'<br>あと'+days+'日で自動削除</div></div>'+
+      '<div class="trash-acts"><button class="btn subtle small" onclick="restoreTrash(\''+t.tid+'\')">↩ 復元</button>'+
+      '<button class="btn danger small" onclick="purgeTrashItem(\''+t.tid+'\')">完全削除</button></div>'+
+    '</div>';
+  }).join(''):'<div class="empty" style="padding:14px">ゴミ箱は空です。</div>';
+  openModal('<h3>🗑 ゴミ箱</h3>'+
+    '<p class="hint">削除した項目は'+TRASH_DAYS+'日間ここに保管され、いつでも復元できます。'+TRASH_DAYS+'日を過ぎると自動的に完全削除されます。</p>'+
+    '<div class="trash-list">'+rows+'</div>'+
+    (items.length?'<div class="btn-row" style="margin-top:10px"><button class="btn ghost small" onclick="emptyTrash()">ゴミ箱を空にする</button></div>':'')+
+    '<div class="btn-row" style="margin-top:12px"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
 }
 function joinVal(sel,txt){const s=Array.isArray(sel)?sel.filter(Boolean).join('、'):(sel||'');return [s,txt].filter(Boolean).join(' ');}
 
@@ -1005,10 +1081,8 @@ function duplicateApo(id){
 }
 function deleteApo(id){
   askConfirm('このアポ記録を削除しますか？',()=>{
-    const idx=state.apos.findIndex(x=>x.id===id); if(idx<0)return;
-    const item=state.apos[idx];
-    state.apos.splice(idx,1); save(); deleteApoRow(id); subView=null; render();
-    showUndo('アポ記録を削除しました',()=>{ state.apos.splice(Math.min(idx,state.apos.length),0,item); save(); syncApoRow(id); render(); });
+    const a=state.apos.find(x=>x.id===id); if(!a)return;
+    softDelete('apo','アポ記録'+(a.name?'（'+a.name+'）':''),a,()=>{ state.apos=state.apos.filter(x=>x.id!==id); deleteApoRow(id); subView=null; });
   });
 }
 function openApoForm(id){subView={type:'apoForm',id};currentTab='apo';syncTabbar();render();window.scrollTo(0,0);}
@@ -1276,10 +1350,8 @@ function addRefPick(){
 }
 function setRef(id,field,value){const r=state.referrals.find(x=>x.id===id);if(!r)return;r[field]=value;save();const _p=document.getElementById('refprev_'+id);if(_p)_p.textContent=refShareText(id);clearTimeout(_refSyncTimers[id]);_refSyncTimers[id]=setTimeout(()=>syncReferralRow(id),400);}
 function deleteRef(id){askConfirm('この紹介者情報を削除しますか？',()=>{
-  const idx=state.referrals.findIndex(x=>x.id===id); if(idx<0)return;
-  const item=state.referrals[idx];
-  state.referrals.splice(idx,1);save();deleteReferralRow(id);subView=null;render();
-  showUndo('紹介者情報を削除しました',()=>{ state.referrals.splice(Math.min(idx,state.referrals.length),0,item); save(); syncReferralRow(id); render(); });
+  const r=state.referrals.find(x=>x.id===id); if(!r)return;
+  softDelete('referral','紹介者情報',r,()=>{ state.referrals=state.referrals.filter(x=>x.id!==id); deleteReferralRow(id); subView=null; });
 });}
 function refTitle(r){
   const a=state.apos.find(x=>x.id===r.apoId)||{};
@@ -1485,8 +1557,9 @@ function setLG(id,f,v){
 }
 function delLG(id){askConfirm('この目標を削除しますか？',()=>{
   const {g,arr}=findGoalItem(id); if(!g||!arr)return;
-  const idx=arr.indexOf(g); if(idx>=0)arr.splice(idx,1); save();render();
-  showUndo('目標を削除しました',()=>{ arr.splice(Math.min(idx,arr.length),0,g); save(); render(); });
+  const kind=(arr===state.yearStartGoals)?'yearStartGoal':'longGoal';
+  const label=(kind==='yearStartGoal'?'年度初めの目標':'長期目標')+(g.text?'（'+String(g.text).slice(0,12)+'）':'');
+  softDelete(kind,label,g,()=>{ const i=arr.indexOf(g); if(i>=0)arr.splice(i,1); });
 });}
 const MG_ROWS=[['r1','❶参画数 ※決めた人'],['r2','❷スキルシート回収数'],['r3','❸紹介数（直紹介）'],['r4','　紹介数（イベント）'],['r5','❹アポ数（初アポ）'],['r6','　アポ数（2回目以降）'],['r7','❺外部イベント参加数']];
 /* 指定日の「翌月1日」を返す（YYYY-MM-DD） */
@@ -1512,10 +1585,8 @@ function findMGForMonth(mk){return state.monthlyGoals.find(m=>mgMonthKey(m)===mk
 function setMG(id,rk,col,v){const m=state.monthlyGoals.find(x=>x.id===id);if(m){m.rows[rk][col]=v;save();}}
 function setMGdate(id,v){const m=state.monthlyGoals.find(x=>x.id===id);if(m){m.reviewDate=v;save();render();}}
 function delMG(id){askConfirm('この月の目標表を削除しますか？',()=>{
-  const idx=state.monthlyGoals.findIndex(x=>x.id===id); if(idx<0)return;
-  const item=state.monthlyGoals[idx];
-  state.monthlyGoals.splice(idx,1);save();render();
-  showUndo('目標表を削除しました',()=>{ state.monthlyGoals.splice(Math.min(idx,state.monthlyGoals.length),0,item); save(); render(); });
+  const m=state.monthlyGoals.find(x=>x.id===id); if(!m)return;
+  softDelete('monthlyGoal',(m.reviewDate?monthLabel(monthKey(m.reviewDate))+'の':'')+'今月の目標表',m,()=>{ state.monthlyGoals=state.monthlyGoals.filter(x=>x.id!==id); });
 });}
 function lgSummaryLines(){
   return state.longGoals.slice()
@@ -1665,8 +1736,7 @@ function setSheetCustom(date,i,v){const s=ensureSheet(date);const label=(state.s
 function setSheetScale(date,f,v){const s=ensureSheet(date);s[f]=v;save();render();}
 function deleteSheet(date){askConfirm(fmtDate(date)+' のシートを削除しますか？',()=>{
   const item=state.schedules[date];
-  delete state.schedules[date];save();subView=null;render();
-  showUndo(fmtDate(date)+' のシートを削除しました',()=>{ state.schedules[date]=item; save(); render(); });
+  softDelete('sheet',fmtDate(date)+' のシート',{date:date,sheet:item},()=>{ delete state.schedules[date]; subView=null; });
 });}
 function openSheet(date){ensureSheet(date);subView={type:'sheet',date};currentTab='schedule';syncTabbar();render();window.scrollTo(0,0);}
 function openSheetPicker(){
@@ -1821,9 +1891,8 @@ function fitA4(){
     p.style.transform='scale('+sc+')';
     w.style.height=(natH*sc+8)+'px';
   }else{
-    /* PC：横も縦も画面に収める＆中央寄せ。zoomで拡縮＝文字がくっきり（滲まない） */
-    const availH=Math.max(240, window.innerHeight-72);
-    const sc=Math.min(availW/794, availH/natH, 1);
+    /* PC：横幅にフィット（最大は原寸）で大きく表示。縦はスクロールで見る。zoomで文字くっきり */
+    const sc=Math.min(1, availW/794);
     p.style.zoom=sc;
     w.style.width=(794*sc)+'px';
     w.style.margin='0 auto';
@@ -1899,6 +1968,9 @@ function openSettings(){
     return '<p class="hint">押すと「見るだけ（編集不可）」のリンクを作れます。特定の人にだけURLを渡して共有できます。</p>'+
       '<button class="btn ghost block" onclick="createShareLink()">🔗 閲覧専用リンクを発行</button>';
   })()+'</div>'+
+  '<div class="field" style="margin-top:16px"><label>ゴミ箱（削除したデータの復元）</label>'+
+  '<p class="hint">削除した項目は'+TRASH_DAYS+'日間ゴミ箱に保管され、ここから復元できます。</p>'+
+  '<button class="btn ghost block" onclick="openTrash()">🗑 ゴミ箱を開く'+((state.trash&&state.trash.length)?'（'+state.trash.length+'件）':'')+'</button></div>'+
   '<div class="field" style="margin-top:16px"><label>データのバックアップ</label>'+
   '<p class="hint">データはサーバーに自動保存され、ログインしたどの端末からも同じ内容が見られます。念のための書き出しはこちらから。</p>'+
   '<button class="btn ghost block" onclick="exportData()">⬇ バックアップを書き出し</button></div>'+
@@ -1991,10 +2063,8 @@ function setWeekly(id,field,value){
   const p=document.getElementById('wkprev_'+id); if(p)p.textContent=weeklyPreviewText(id);
 }
 function deleteWeekly(id){askConfirm('この週の振り返りを削除しますか？',()=>{
-  const idx=state.weeklyReviews.findIndex(x=>x.id===id); if(idx<0)return;
-  const item=state.weeklyReviews[idx];
-  state.weeklyReviews.splice(idx,1);save();subView=null;render();
-  showUndo('週次振り返りを削除しました',()=>{ state.weeklyReviews.splice(Math.min(idx,state.weeklyReviews.length),0,item); save(); render(); });
+  const w=state.weeklyReviews.find(x=>x.id===id); if(!w)return;
+  softDelete('weekly','週次振り返り'+(w.periodStart?'（'+fmtDate(w.periodStart)+'〜）':''),w,()=>{ state.weeklyReviews=state.weeklyReviews.filter(x=>x.id!==id); subView=null; });
 });}
 function wkGoalTable(id,field,obj){
   obj=obj||{};
@@ -2098,9 +2168,8 @@ function setPerson(recId,listField,idx,field,value){
 }
 function removePerson(recId,listField,idx){
   const m=state.mtgs.find(x=>x.id===recId); if(!m)return;
-  const item=m[listField][idx];
-  m[listField].splice(idx,1); save(); render();
-  showUndo('1件削除しました',()=>{ const mm=state.mtgs.find(x=>x.id===recId); if(mm){mm[listField].splice(Math.min(idx,mm[listField].length),0,item);save();render();} });
+  const person=m[listField][idx];
+  softDelete('person','MTGの箇条書き'+(person&&person.name?'（'+person.name+'）':''),{recId:recId,listField:listField,person:person},()=>{ m[listField].splice(idx,1); });
 }
 function addPerson(recId,listField){
   const m=state.mtgs.find(x=>x.id===recId); if(!m)return;
@@ -2170,10 +2239,8 @@ function addMtg(){
 }
 function setMtg(id,field,value){const m=state.mtgs.find(x=>x.id===id); if(m){m[field]=value; save();}}
 function deleteMtg(id){askConfirm('このMTG記録を削除しますか？',()=>{
-  const idx=state.mtgs.findIndex(x=>x.id===id); if(idx<0)return;
-  const item=state.mtgs[idx];
-  state.mtgs.splice(idx,1);save();subView=null;render();
-  showUndo('MTG記録を削除しました',()=>{ state.mtgs.splice(Math.min(idx,state.mtgs.length),0,item); save(); render(); });
+  const m=state.mtgs.find(x=>x.id===id); if(!m)return;
+  softDelete('mtg','個別MTG'+(m.date?'（'+fmtDate(m.date)+'）':''),m,()=>{ state.mtgs=state.mtgs.filter(x=>x.id!==id); subView=null; });
 });}
 function memoMapFromList(list){const mp={};(list||[]).forEach(p=>{if(p.name&&p.memo)mp[p.name]=p.memo;});return mp;}
 function refreshAbdFromManage(id){
@@ -2263,6 +2330,7 @@ function applySavedToState(saved){
   if(!state.weeklyReviews)state.weeklyReviews=[];
   if(!state.mtgs)state.mtgs=[];
   if(!state.yearStartGoals)state.yearStartGoals=[];
+  if(!state.trash)state.trash=[];
   (state.mtgs||[]).forEach(m=>{
     if(m.longGoalText===undefined){m.longGoalText=(lgSummaryLines().join('\n'))+(m.longGoalNote?('\n'+m.longGoalNote):'');}
     (m.abdList||[]).forEach(p=>{if(!p.grp)p.grp='A';});
@@ -2368,6 +2436,7 @@ async function doLogout(){
 async function afterLogin(){
   const cached=localCache.get();
   applySavedToState(cached);
+  purgeTrash(); /* 期限切れのゴミ箱項目を自動削除 */
   showApp();
   render();
   tryNotify();
