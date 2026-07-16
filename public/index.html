@@ -219,6 +219,8 @@ textarea.red, input.red{color:var(--red); font-weight:600;}
 .slot-row .t{flex:none; width:56px; font-size:13px; font-weight:700; color:var(--indigo-deep); font-variant-numeric:tabular-nums;}
 .slot-row input{border:none; background:none; border-radius:0; padding:6px 4px; font-size:14px;}
 .slot-row input:focus{outline:none; background:var(--indigo-bg);}
+.slot-row .slot-ta{flex:1; min-width:0; border:none; background:none; border-radius:6px; padding:6px 4px; font-size:calc(14px * var(--fs,1)); line-height:1.35; min-height:0; height:auto; resize:none; overflow:hidden; white-space:pre-wrap; word-break:break-word;}
+.slot-row .slot-ta:focus{outline:none; background:var(--indigo-bg);}
 .todo-item{display:flex; align-items:flex-start; gap:8px; padding:4px 0; font-size:calc(14px * var(--fs,1));}
 .todo-item input[type=checkbox]{width:20px; height:20px; margin-top:2px; accent-color:var(--indigo);}
 .todo-item.done span{color:var(--sub); text-decoration:line-through;}
@@ -269,9 +271,9 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .big-title-preview{font-size:calc(20px * var(--fs,1)); font-weight:800; line-height:1.4; margin-bottom:12px; padding:10px 12px; background:var(--indigo-bg); border-radius:10px; color:var(--indigo-deep);}
 .time-sel{display:flex;align-items:center;gap:4px;}
 .time-sel select{width:auto;flex:1;text-align:center;}
-.slot-row input.slot-red{color:var(--red);font-weight:600;border-left:1px dashed var(--line);}
-.slot-row input{touch-action:manipulation;}
-.slot-row input.strike{text-decoration:line-through; text-decoration-thickness:2px; text-decoration-color:var(--red); color:var(--sub);}
+.slot-row .slot-red{color:var(--red);font-weight:600;border-left:1px dashed var(--line);}
+.slot-row input, .slot-row textarea{touch-action:manipulation;}
+.slot-row .strike{text-decoration:line-through; text-decoration-thickness:2px; text-decoration-color:var(--red); color:var(--sub);}
 .msel-wrap{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px;}
 .msel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;background:#fff;cursor:pointer;}
 .msel input{width:16px;height:16px;accent-color:var(--indigo);margin:0;}
@@ -681,16 +683,17 @@ document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA'
 document.addEventListener('keydown',e=>{
   if(e.key!=='Enter'||e.isComposing)return; /* 日本語変換中は無視 */
   const el=e.target;
-  if(!el||el.tagName!=='INPUT')return;
+  if(!el||(el.tagName!=='INPUT'&&el.tagName!=='TEXTAREA'))return;
   const slot=el.closest('.slot-row');
   const tbl=el.closest('table.goal');
   if(!slot&&!tbl)return;
+  if(el.tagName==='TEXTAREA'&&!slot)return; /* スロット以外のtextareaは通常の改行を許可 */
   e.preventDefault();
   let next=null;
   if(slot){
     /* 予定は予定の列、変更は変更の列を、それぞれ下の行へ */
     const isRed=el.classList.contains('slot-red');
-    const col=Array.from(document.querySelectorAll(isRed?'.slot-row input.slot-red':'.slot-row input:not(.slot-red)'));
+    const col=Array.from(document.querySelectorAll(isRed?'.slot-row .slot-red':'.slot-row .slot-ta:not(.slot-red)'));
     const i=col.indexOf(el); if(i>=0&&i<col.length-1)next=col[i+1];
   }else{
     const cell=el.closest('td'), row=el.closest('tr');
@@ -1625,7 +1628,7 @@ function sheetView(date){
     F('終業時間',timeSel(date,'endW',s.endW))+'</div>'+
     '<p class="hint">分は00・15・30・45から選べます。始業時間・終業時間と「今月の数字」の目標欄は、変更しない限り翌日以降のシートにも自動で引き継がれます。</p>'+
     '<div class="slot-row" style="border-bottom:none"><span class="t"></span><span style="flex:1;font-size:11px;font-weight:700;color:var(--indigo-deep)">予定</span><span style="flex:1;font-size:11px;font-weight:700;color:var(--red)">変更</span><span style="flex:none;width:96px;text-align:center;font-size:11px;font-weight:700;color:var(--red)">ABC</span></div>'+
-    tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><input type="text" class="'+((s.slotStrike||{})[t]?'strike':'')+'" value="'+esc(s.slots[t]||'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" onpointerup="slotTapToggle(\''+date+'\',\''+esc(t)+'\',event)" onmousedown="if(event.detail>1)event.preventDefault()"><input type="text" class="slot-red" value="'+esc((s.slotsRed||{})[t]||'')+'" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)">'+abcBtns(date,t,abc[t]||'')+'</div>').join('')+
+    tpl.timeSlots.map(t=>'<div class="slot-row"><span class="t">'+esc(t)+'-</span><textarea rows="1" class="slot-ta'+((s.slotStrike||{})[t]?' strike':'')+'" oninput="setSheetSlot(\''+date+'\',\''+esc(t)+'\',this.value)" onpointerup="slotTapToggle(\''+date+'\',\''+esc(t)+'\',event)" onmousedown="if(event.detail>1)event.preventDefault()">'+esc(s.slots[t]||'')+'</textarea><textarea rows="1" class="slot-ta slot-red" oninput="setSheetSlotRed(\''+date+'\',\''+esc(t)+'\',this.value)">'+esc((s.slotsRed||{})[t]||'')+'</textarea>'+abcBtns(date,t,abc[t]||'')+'</div>').join('')+
     '<p class="hint" style="margin-top:6px">右の赤い欄には、振り返りで予定変更があった場合の実際の行動を記入します。<br>ダブルタップすると予定の文字を線で消すことが可能です。元に戻す場合も、ダブルタップして下さい。</p>'+
     '<p class="hint" style="margin-top:8px">① 今日やるタスク全てに番号を振る ② 番号を元にスケジュールに記載 ③ 1日の最後に実際の行動を記入 ④ 各行動にABCを付ける<br>（A：目標に繋がる／B：繋がらない／C：繋がらないが生活に必要）</p>'+
   '</div>'+
