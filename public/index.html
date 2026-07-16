@@ -62,7 +62,7 @@ body{
   background-attachment:fixed;
   color:var(--ink);
   font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
-  font-size:15px; line-height:1.5; letter-spacing:.005em;
+  font-size:calc(14px * var(--fs,1)); line-height:1.5; letter-spacing:.005em;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility;
   padding-bottom:calc(64px + env(safe-area-inset-bottom));
 }
@@ -101,7 +101,7 @@ nav.tabbar button.active{color:var(--indigo-ink); font-weight:800;}
 nav.tabbar button.active .ico{background:var(--indigo-bg); transform:translateY(-1px) scale(1.08);}
 nav.tabbar button.active::before{content:""; position:absolute; top:0; left:50%; transform:translateX(-50%); width:26px; height:3px; border-radius:0 0 4px 4px; background:var(--grad);}
 
-h2.page{font-size:19px; font-weight:800; margin:4px 0 10px; letter-spacing:.02em; display:flex; align-items:center; justify-content:space-between; gap:8px; position:relative; padding-left:13px;}
+h2.page{font-size:calc(19px * var(--fs,1)); font-weight:800; margin:4px 0 10px; letter-spacing:.02em; display:flex; align-items:center; justify-content:space-between; gap:8px; position:relative; padding-left:13px;}
 h2.page::before{content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width:5px; height:20px; border-radius:3px; background:var(--grad);}
 h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:0;}
 
@@ -175,8 +175,8 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .month-head .arrow{margin-left:auto; color:var(--sub); font-size:12px;}
 .month-body{border-top:2px solid var(--indigo); padding-top:10px;}
 
-.rec-title{font-size:17px; font-weight:800; letter-spacing:.02em; margin-bottom:2px;}
-.rec-sub{font-size:12px; color:var(--sub);}
+.rec-title{font-size:calc(17px * var(--fs,1)); font-weight:800; letter-spacing:.02em; margin-bottom:2px;}
+.rec-sub{font-size:calc(12px * var(--fs,1)); color:var(--sub);}
 .rec-meta{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
 .chip{font-size:11px; padding:2px 8px; border-radius:999px; background:var(--chip-bg); color:var(--chip-ink);}
 .chip.blue{background:var(--indigo-bg); color:var(--indigo-deep);}
@@ -191,11 +191,11 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 
 /* forms */
 .field{margin-bottom:10px;}
-.field>label{display:block; font-size:12px; font-weight:700; color:var(--indigo-deep); letter-spacing:.05em; margin-bottom:4px;}
+.field>label{display:block; font-size:calc(12px * var(--fs,1)); font-weight:700; color:var(--indigo-deep); letter-spacing:.05em; margin-bottom:4px;}
 .field>label .auto{font-weight:400; color:var(--sub); font-size:11px;}
 input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
   width:100%; border:1.5px solid var(--line); border-radius:11px; background:var(--soft);
-  padding:10px 12px; font-size:15px; font-family:inherit; color:var(--ink);
+  padding:10px 12px; font-size:calc(15px * var(--fs,1)); font-family:inherit; color:var(--ink);
   transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 input:focus,select:focus,textarea:focus{outline:none; border-color:var(--indigo); background:#fff; box-shadow:0 0 0 3px var(--focus-ring);}
@@ -211,7 +211,7 @@ textarea.red, input.red{color:var(--red); font-weight:600;}
 .opt-edit{flex:none; border:none; background:none; color:var(--indigo); font-size:11px; cursor:pointer; text-decoration:underline; padding:2px 4px; font-family:inherit;}
 
 .form-title{font-size:19px; font-weight:800; margin:2px 0 14px; line-height:1.4;}
-.section-label{font-size:13px; font-weight:800; color:#fff; background:var(--grad); display:inline-block; padding:4px 14px; border-radius:9px; margin:12px 0 8px; letter-spacing:.08em; text-shadow:0 1px 2px var(--on-grad-tsh); box-shadow:0 3px 10px var(--accent-glow);}
+.section-label{font-size:calc(13px * var(--fs,1)); font-weight:800; color:#fff; background:var(--grad); display:inline-block; padding:4px 14px; border-radius:9px; margin:12px 0 8px; letter-spacing:.08em; text-shadow:0 1px 2px var(--on-grad-tsh); box-shadow:0 3px 10px var(--accent-glow);}
 .section-label.red{background:linear-gradient(135deg,#F03E3E,#C92A2A); box-shadow:0 3px 10px rgba(224,49,49,.25);}
 
 /* schedule sheet */
@@ -219,7 +219,7 @@ textarea.red, input.red{color:var(--red); font-weight:600;}
 .slot-row .t{flex:none; width:56px; font-size:13px; font-weight:700; color:var(--indigo-deep); font-variant-numeric:tabular-nums;}
 .slot-row input{border:none; background:none; border-radius:0; padding:6px 4px; font-size:14px;}
 .slot-row input:focus{outline:none; background:var(--indigo-bg);}
-.todo-item{display:flex; align-items:flex-start; gap:8px; padding:4px 0; font-size:14px;}
+.todo-item{display:flex; align-items:flex-start; gap:8px; padding:4px 0; font-size:calc(14px * var(--fs,1));}
 .todo-item input[type=checkbox]{width:20px; height:20px; margin-top:2px; accent-color:var(--indigo);}
 .todo-item.done span{color:var(--sub); text-decoration:line-through;}
 .scale-row{display:flex; gap:4px; flex-wrap:wrap; margin:4px 0 10px;}
@@ -260,13 +260,13 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .opt-row.dragging{transition:none; background:var(--indigo-bg); border-radius:8px; box-shadow:0 4px 14px rgba(30,60,110,.18);}
 
 .empty{color:var(--sub); font-size:13.5px; text-align:center; padding:26px 10px;}
-.hint{font-size:11.5px; color:var(--sub); line-height:1.6;}
+.hint{font-size:calc(11.5px * var(--fs,1)); color:var(--sub); line-height:1.6;}
 .toast{position:fixed; bottom:calc(76px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:9px 18px; border-radius:999px; font-size:13px; z-index:60; box-shadow:0 4px 14px rgba(0,0,0,.25); opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap;}
 .toast.show{opacity:1;}
 .back{position:sticky; top:calc(46px + env(safe-area-inset-top)); z-index:19; display:inline-flex; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--shadow); color:var(--indigo-ink); font-size:13px; font-weight:800; cursor:pointer; padding:8px 15px; margin-bottom:12px; border-radius:999px; font-family:inherit;}
 .back:active{transform:translateY(1px);}
 .summary-box{background:var(--soft); border:1px dashed var(--line); border-radius:10px; padding:10px 12px; font-size:13px; white-space:pre-wrap; line-height:1.7;}
-.big-title-preview{font-size:20px; font-weight:800; line-height:1.4; margin-bottom:12px; padding:10px 12px; background:var(--indigo-bg); border-radius:10px; color:var(--indigo-deep);}
+.big-title-preview{font-size:calc(20px * var(--fs,1)); font-weight:800; line-height:1.4; margin-bottom:12px; padding:10px 12px; background:var(--indigo-bg); border-radius:10px; color:var(--indigo-deep);}
 .time-sel{display:flex;align-items:center;gap:4px;}
 .time-sel select{width:auto;flex:1;text-align:center;}
 .slot-row input.slot-red{color:var(--red);font-weight:600;border-left:1px dashed var(--line);}
@@ -1797,14 +1797,16 @@ function openSettings(){
   '<button class="btn danger block" onclick="resetAll()">すべてのデータを削除する</button></div>'+
   '<div class="btn-row" style="margin-top:14px"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
 }
-const FONT_SCALE={small:.8,medium:.92,large:1.1};
+/* 文字サイズ：body/preview以外の実テキストにだけ効く倍率。zoomではなく font-size を実際に変える */
+const FONT_SCALE={small:.86,medium:1.0,large:1.16};
 function applyFontSize(){
   const fs=(state.ui&&state.ui.fontSize)||'small';
   const scale=FONT_SCALE[fs]||1;
-  const root=document.getElementById('appRoot');
-  if(root)root.style.zoom=scale;
-  const authCard=document.querySelector('.auth-card');
-  if(authCard)authCard.style.zoom=scale;
+  /* ルートに --fs を渡し、CSS側で font-size に掛ける（レイアウトのzoomはしない＝文字だけ変わる） */
+  document.documentElement.style.setProperty('--fs', scale);
+  /* 旧zoomが残っていたら解除 */
+  const root=document.getElementById('appRoot'); if(root)root.style.zoom='';
+  const authCard=document.querySelector('.auth-card'); if(authCard)authCard.style.zoom='';
 }
 function setFontSize(fs){
   if(!state.ui)state.ui={};
