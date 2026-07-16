@@ -1864,7 +1864,7 @@ function a4View(date){
         tpl.todo2.map((t,i)=>'<div class="titem">'+chk(s.todo2[i])+'<span>'+esc(t)+'</span></div>').join('')+
         '<h5>'+esc(tpl.metricsTitle||'今日終了時点の今月の数字（目標）')+'</h5>'+
         '<table class="mt"><tr><th></th><th style="width:44px">目標</th><th style="width:44px">結果</th></tr>'+
-        tpl.metrics.map((m,i)=>'<tr><td>'+esc(m)+'</td><td style="text-align:center">'+esc(mgoals[i]||'')+'</td><td style="text-align:center">'+esc(s.metrics[i]||'')+'</td></tr>').join('')+'</table>'+
+        tpl.metrics.map((m,i)=>'<tr><td>'+esc(m)+'</td><td style="text-align:center">'+esc(mgoals[i]||'')+'</td><td style="text-align:center;color:#C0392B;font-weight:700">'+esc(s.metrics[i]||'')+'</td></tr>').join('')+'</table>'+
         '<h5>イベント参加した日の振返り</h5>'+
         '<div style="font-size:12px">①イベント数：'+esc(s.evCount||'　')+'　②金額合計：'+esc(s.evCost||'　')+'円<br>③LINE交換人数：'+esc(s.evLine||'　')+'　❹コスパ（②÷③）：'+cospa(s)+' 円/人</div>'+
         '<h5>1日の振り返り</h5>'+
