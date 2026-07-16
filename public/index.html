@@ -148,6 +148,7 @@ h2.page small{font-size:12px; color:var(--sub); font-weight:400; letter-spacing:
 .seg{display:flex; background:var(--seg-bg); border-radius:12px; padding:4px; margin-bottom:12px;}
 .seg button{flex:1; border:none; background:none; padding:8px 4px; border-radius:9px; font-size:13px; color:var(--sub); cursor:pointer; font-family:inherit; font-weight:700; transition:color .15s;}
 .seg button.on{background:#fff; color:var(--indigo-ink); box-shadow:0 2px 8px rgba(24,40,80,.12);}
+.seg.seg3 button{font-size:calc(12px * var(--fs,1)); padding:8px 2px; letter-spacing:0;}
 
 /* 月・年セレクタ */
 .month-nav{display:flex; align-items:center; gap:8px; margin:2px 0 12px;}
@@ -643,7 +644,7 @@ function defaultState(){
       todo2:['❶X投稿50件'],
       metrics:['紹介数（イベント動員数含む）','金塚さんに繋げる提案数','親友アポ数','LINE交換数','①SE外アポ数','②SEアポ数','アポ数合計（①②）']
     },
-    longGoals:[], monthlyGoals:[], weeklyReviews:[], mtgs:[],
+    longGoals:[], yearStartGoals:[], monthlyGoals:[], weeklyReviews:[], mtgs:[],
     carry:{longGoal:'', monthGoal:'', startW:'', endW:'', metricGoals:{}},
     ui:{apoView:'month', mngView:'order', fontSize:'small'}
   };
@@ -1037,9 +1038,16 @@ function yearPickerHtml(curYear,years,fnName){
   const opts=arr.map(y=>'<option value="'+y+'"'+(y===String(curYear)?' selected':'')+'>'+y+'年度</option>').join('');
   return '<div class="month-nav"><span class="mn-ico">📅</span><select onchange="'+fnName+'(this.value)">'+opts+'</select></div>';
 }
-/* 長期目標の期限：年・月・日をドロップダウンで選ぶ（iOSのカレンダーが勝手に今日になる問題を回避） */
+/* 長期目標・年度初めの目標の共通ルックアップ（idからアイテムと所属リストを返す） */
+function findGoalItem(id){
+  for(const arr of [state.longGoals||[], state.yearStartGoals||[]]){
+    const g=arr.find(x=>x.id===id); if(g)return {g:g,arr:arr};
+  }
+  return {g:null,arr:null};
+}
+/* 期限：年・月・日をドロップダウンで選ぶ（iOSのカレンダーが勝手に今日になる問題を回避） */
 function duePartsOf(id){
-  const g=state.longGoals.find(x=>x.id===id)||{};
+  const g=findGoalItem(id).g||{};
   const t=state.ui&&state.ui['dueParts_'+id];
   if(t)return {y:t.y||'',m:t.m||'',d:t.d||''};
   if(g.due){const p=String(g.due).split('-');return {y:p[0]||'',m:p[1]?String(+p[1]):'',d:p[2]?String(+p[2]):''};}
@@ -1055,14 +1063,14 @@ function dueSelectsHtml(g){
          '<select class="due-sel" onchange="setDuePart(\''+g.id+'\',\'d\',this.value)">'+d+'</select>';
 }
 function setDuePart(id,part,val){
-  const g=state.longGoals.find(x=>x.id===id); if(!g)return;
+  const g=findGoalItem(id).g; if(!g)return;
   const cur=duePartsOf(id); cur[part]=val;
   if(!state.ui)state.ui={}; state.ui['dueParts_'+id]=cur;
   g.due=(cur.y&&cur.m&&cur.d)?(cur.y+'-'+String(cur.m).padStart(2,'0')+'-'+String(cur.d).padStart(2,'0')):'';
   save();render();
 }
 function dueClear(id){
-  const g=state.longGoals.find(x=>x.id===id); if(g)g.due='';
+  const g=findGoalItem(id).g; if(g)g.due='';
   if(state.ui)delete state.ui['dueParts_'+id];
   save();render();
 }
@@ -1441,13 +1449,20 @@ function addLongGoal(){
   state.ui['lgo_'+gid]=true; /* 新規追加時は開いて編集できるように */
   save();render();
 }
+function addYearStartGoal(){
+  const gid=uid();
+  if(!state.yearStartGoals)state.yearStartGoals=[];
+  state.yearStartGoals.push({id:gid,reviewDate:today(),due:'',text:'',createdAt:Date.now()});
+  state.ui['lgo_'+gid]=true;
+  save();render();
+}
 function setLG(id,f,v){
-  const g=state.longGoals.find(x=>x.id===id); if(!g)return;
+  const g=findGoalItem(id).g; if(!g)return;
   g[f]=v; save();
   const p=document.getElementById('lgprev_'+id);
   if(p)p.textContent=lgText(g)||'（期限と目標を入力すると、ここにつながって表示されます）';
 }
-function delLG(id){askConfirm('この目標を削除しますか？',()=>{state.longGoals=state.longGoals.filter(x=>x.id!==id);save();render();});}
+function delLG(id){askConfirm('この目標を削除しますか？',()=>{const {g,arr}=findGoalItem(id);if(g&&arr){const i=arr.indexOf(g);if(i>=0)arr.splice(i,1);}save();render();});}
 const MG_ROWS=[['r1','❶参画数 ※決めた人'],['r2','❷スキルシート回収数'],['r3','❸紹介数（直紹介）'],['r4','　紹介数（イベント）'],['r5','❹アポ数（初アポ）'],['r6','　アポ数（2回目以降）'],['r7','❺外部イベント参加数']];
 /* 指定日の「翌月1日」を返す（YYYY-MM-DD） */
 function nextMonthFirst(dateStr){
@@ -1507,6 +1522,13 @@ function goalView(){
   const lgHtml=(state.longGoals.length?monthPickerHtmlYear(curYear,lgYears):'')+
     (yearGoals.length?yearGoals.map(lgCard).join('')
       :(state.longGoals.length?'<div class="empty">'+curYear+'年度の長期目標はありません。<br>上の📅で他の年度を選べます。</div>':'<div class="empty">「＋」で長期目標を追加できます。</div>'));
+  /* 年度初めの目標：長期目標と同じ形（現在の年度を初期表示） */
+  const ys=state.yearStartGoals||[];
+  const ysYears=ys.map(lgYear);
+  const yearYs=ys.filter(g=>lgYear(g)===curYear).sort((a,b)=>(b.due||'0000-00-00').localeCompare(a.due||'0000-00-00')||b.createdAt-a.createdAt);
+  const ysHtml=(ys.length?monthPickerHtmlYear(curYear,ysYears):'')+
+    (yearYs.length?yearYs.map(lgCard).join('')
+      :(ys.length?'<div class="empty">'+curYear+'年度の年度初めの目標はありません。<br>上の📅で他の年度を選べます。</div>':'<div class="empty">「＋」で年度初めの目標を追加できます。</div>'));
   /* 今月の目標と結果：現在の月を初期表示。過去・未来の月は選択式 */
   const mgMonths=state.monthlyGoals.map(m=>monthKey(m.reviewDate));
   const curMonth=state.ui.goalMonth||thisMonthKey();
@@ -1522,14 +1544,29 @@ function goalView(){
   const mgHtml=(state.monthlyGoals.length?monthPickerHtml(curMonth,mgMonths,'setGoalMonth'):'')+
     (monthMGs.length?monthMGs.map(mgCard).join('')
       :(state.monthlyGoals.length?'<div class="empty">'+monthLabel(curMonth)+'の目標表はありません。<br>上の📅で他の月を選べます。</div>':'<div class="empty">「＋」で表を追加すると、月ごとにリストになります。</div>'));
-  return '<h2 class="page">目標</h2>'+
-    '<div class="section-label">長期目標</div>'+
-    '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addLongGoal()">＋ 長期目標を追加</button></div>'+
-    '<p class="hint">現在の年度を表示します。過去・未来の年度は上の📅から選べます。期限は「カレンダーで選ぶ」を押したときだけ設定され、勝手に今日の日付は入りません。</p>'+
-    lgHtml+
-    '<div class="section-label" style="margin-top:26px">今月の目標と結果</div>'+
-    '<div class="btn-row"><button class="btn primary block" onclick="addMonthlyGoal()">＋ 今月の目標表を追加</button></div>'+
-    mgHtml;
+  const tab=state.ui.goalTab||'monthly';
+  const seg='<div class="seg seg3">'+
+    '<button class="'+(tab==='monthly'?'on':'')+'" onclick="state.ui.goalTab=\'monthly\';save();render();window.scrollTo(0,0)">今月の目標</button>'+
+    '<button class="'+(tab==='long'?'on':'')+'" onclick="state.ui.goalTab=\'long\';save();render();window.scrollTo(0,0)">長期目標</button>'+
+    '<button class="'+(tab==='yearStart'?'on':'')+'" onclick="state.ui.goalTab=\'yearStart\';save();render();window.scrollTo(0,0)">年度初め</button>'+
+  '</div>';
+  let body;
+  if(tab==='long'){
+    body='<div class="section-label" style="margin-top:2px">長期目標</div>'+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addLongGoal()">＋ 長期目標を追加</button></div>'+
+      '<p class="hint">現在の年度を表示します。過去・未来の年度は上の📅から選べます。期限は年・月・日を選んだときだけ設定され、勝手に今日の日付は入りません。</p>'+
+      lgHtml;
+  }else if(tab==='yearStart'){
+    body='<div class="section-label" style="margin-top:2px">年度初めの目標</div>'+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addYearStartGoal()">＋ 年度初めの目標を追加</button></div>'+
+      '<p class="hint">年度の初めに立てる目標です。長期目標と同じ形で、期限（任意）と内容を記入できます。</p>'+
+      ysHtml;
+  }else{
+    body='<div class="section-label" style="margin-top:2px">今月の目標と結果</div>'+
+      '<div class="btn-row"><button class="btn primary block" onclick="addMonthlyGoal()">＋ 今月の目標表を追加</button></div>'+
+      mgHtml;
+  }
+  return '<h2 class="page">目標</h2>'+seg+body;
 }
 function monthPickerHtmlYear(curYear,years){return yearPickerHtml(curYear,years,'setGoalYear');}
 /* ============================================================
@@ -2179,6 +2216,7 @@ function applySavedToState(saved){
   (state.monthlyGoals||[]).forEach(m=>{Object.keys(m.rows||{}).forEach(rk=>{if(m.rows[rk].tp===undefined)m.rows[rk].tp='';});if(m.reason===undefined)m.reason='';});
   if(!state.weeklyReviews)state.weeklyReviews=[];
   if(!state.mtgs)state.mtgs=[];
+  if(!state.yearStartGoals)state.yearStartGoals=[];
   (state.mtgs||[]).forEach(m=>{
     if(m.longGoalText===undefined){m.longGoalText=(lgSummaryLines().join('\n'))+(m.longGoalNote?('\n'+m.longGoalNote):'');}
     (m.abdList||[]).forEach(p=>{if(!p.grp)p.grp='A';});
