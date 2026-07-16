@@ -285,6 +285,9 @@ table.goal input:focus{background:var(--indigo-bg); outline:none;}
 .empty{color:var(--sub); font-size:13.5px; text-align:center; padding:26px 10px;}
 .hint{font-size:calc(11.5px * var(--fs,1)); color:var(--sub); line-height:1.6;}
 .toast{position:fixed; bottom:calc(76px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:9px 18px; border-radius:999px; font-size:13px; z-index:60; box-shadow:0 4px 14px rgba(0,0,0,.25); opacity:0; transition:opacity .25s; pointer-events:none; white-space:nowrap;}
+.toast.has-undo{pointer-events:auto; white-space:normal; display:flex; gap:12px; align-items:center; max-width:calc(100vw - 32px); padding:8px 8px 8px 16px;}
+.toast .undo-btn{background:rgba(255,255,255,.22); border:none; color:#fff; font-weight:800; padding:6px 14px; border-radius:999px; cursor:pointer; font-size:13px; flex:none;}
+.toast .undo-btn:active{background:rgba(255,255,255,.35);}
 .toast.show{opacity:1;}
 .back{position:sticky; top:calc(46px + env(safe-area-inset-top)); z-index:19; display:inline-flex; align-items:center; background:#fff; border:1px solid var(--line); box-shadow:var(--shadow); color:var(--indigo-ink); font-size:13px; font-weight:800; cursor:pointer; padding:8px 15px; margin-bottom:12px; border-radius:999px; font-family:inherit;}
 .back:active{transform:translateY(1px);}
@@ -671,7 +674,15 @@ function grownNumber(base,baseYear){
   const y=Number(baseYear)||thisYear();
   return b+Math.max(0,thisYear()-y);
 }
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),2200);}
+function toast(msg){const t=$('#toast');t.classList.remove('has-undo');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),2200);}
+/* 削除の直後に「元に戻す」を出す（誤削除の復元）。restoreFnで元に戻す */
+function showUndo(msg,restoreFn){
+  const t=$('#toast'); clearTimeout(t._tm);
+  t.innerHTML='<span>'+esc(msg)+'</span><button class="undo-btn" onclick="__undoNow()">↩ 元に戻す</button>';
+  t.classList.add('show','has-undo');
+  window.__undoNow=function(){ clearTimeout(t._tm); t.classList.remove('show','has-undo'); t.innerHTML=''; window.__undoNow=null; try{restoreFn();}catch(e){} };
+  t._tm=setTimeout(()=>{ t.classList.remove('show','has-undo'); t.innerHTML=''; window.__undoNow=null; }, 7000);
+}
 function joinVal(sel,txt){const s=Array.isArray(sel)?sel.filter(Boolean).join('、'):(sel||'');return [s,txt].filter(Boolean).join(' ');}
 
 /* ---------- 音声入力 ---------- */
@@ -993,7 +1004,12 @@ function duplicateApo(id){
   openApoForm(a.id);
 }
 function deleteApo(id){
-  askConfirm('このアポ記録を削除しますか？',()=>{state.apos=state.apos.filter(x=>x.id!==id); save(); deleteApoRow(id); subView=null; render();});
+  askConfirm('このアポ記録を削除しますか？',()=>{
+    const idx=state.apos.findIndex(x=>x.id===id); if(idx<0)return;
+    const item=state.apos[idx];
+    state.apos.splice(idx,1); save(); deleteApoRow(id); subView=null; render();
+    showUndo('アポ記録を削除しました',()=>{ state.apos.splice(Math.min(idx,state.apos.length),0,item); save(); syncApoRow(id); render(); });
+  });
 }
 function openApoForm(id){subView={type:'apoForm',id};currentTab='apo';syncTabbar();render();window.scrollTo(0,0);}
 function syncTabbar(){document.querySelectorAll('#tabbar button').forEach(x=>x.classList.toggle('active',x.dataset.tab===currentTab));}
@@ -1259,7 +1275,12 @@ function addRefPick(){
     '<div class="btn-row" style="margin-top:12px"><button class="btn subtle block" onclick="closeModal()">キャンセル</button></div>');
 }
 function setRef(id,field,value){const r=state.referrals.find(x=>x.id===id);if(!r)return;r[field]=value;save();const _p=document.getElementById('refprev_'+id);if(_p)_p.textContent=refShareText(id);clearTimeout(_refSyncTimers[id]);_refSyncTimers[id]=setTimeout(()=>syncReferralRow(id),400);}
-function deleteRef(id){askConfirm('この紹介者情報を削除しますか？',()=>{state.referrals=state.referrals.filter(x=>x.id!==id);save();deleteReferralRow(id);subView=null;render();});}
+function deleteRef(id){askConfirm('この紹介者情報を削除しますか？',()=>{
+  const idx=state.referrals.findIndex(x=>x.id===id); if(idx<0)return;
+  const item=state.referrals[idx];
+  state.referrals.splice(idx,1);save();deleteReferralRow(id);subView=null;render();
+  showUndo('紹介者情報を削除しました',()=>{ state.referrals.splice(Math.min(idx,state.referrals.length),0,item); save(); syncReferralRow(id); render(); });
+});}
 function refTitle(r){
   const a=state.apos.find(x=>x.id===r.apoId)||{};
   const age=grownNumber(a.age,a.ageYear);
@@ -1462,7 +1483,11 @@ function setLG(id,f,v){
   const p=document.getElementById('lgprev_'+id);
   if(p)p.textContent=lgText(g)||'（期限と目標を入力すると、ここにつながって表示されます）';
 }
-function delLG(id){askConfirm('この目標を削除しますか？',()=>{const {g,arr}=findGoalItem(id);if(g&&arr){const i=arr.indexOf(g);if(i>=0)arr.splice(i,1);}save();render();});}
+function delLG(id){askConfirm('この目標を削除しますか？',()=>{
+  const {g,arr}=findGoalItem(id); if(!g||!arr)return;
+  const idx=arr.indexOf(g); if(idx>=0)arr.splice(idx,1); save();render();
+  showUndo('目標を削除しました',()=>{ arr.splice(Math.min(idx,arr.length),0,g); save(); render(); });
+});}
 const MG_ROWS=[['r1','❶参画数 ※決めた人'],['r2','❷スキルシート回収数'],['r3','❸紹介数（直紹介）'],['r4','　紹介数（イベント）'],['r5','❹アポ数（初アポ）'],['r6','　アポ数（2回目以降）'],['r7','❺外部イベント参加数']];
 /* 指定日の「翌月1日」を返す（YYYY-MM-DD） */
 function nextMonthFirst(dateStr){
@@ -1486,7 +1511,12 @@ function mgMonthKey(m){return monthKey(m.reviewDate);}
 function findMGForMonth(mk){return state.monthlyGoals.find(m=>mgMonthKey(m)===mk);}
 function setMG(id,rk,col,v){const m=state.monthlyGoals.find(x=>x.id===id);if(m){m.rows[rk][col]=v;save();}}
 function setMGdate(id,v){const m=state.monthlyGoals.find(x=>x.id===id);if(m){m.reviewDate=v;save();render();}}
-function delMG(id){askConfirm('この月の目標表を削除しますか？',()=>{state.monthlyGoals=state.monthlyGoals.filter(x=>x.id!==id);save();render();});}
+function delMG(id){askConfirm('この月の目標表を削除しますか？',()=>{
+  const idx=state.monthlyGoals.findIndex(x=>x.id===id); if(idx<0)return;
+  const item=state.monthlyGoals[idx];
+  state.monthlyGoals.splice(idx,1);save();render();
+  showUndo('目標表を削除しました',()=>{ state.monthlyGoals.splice(Math.min(idx,state.monthlyGoals.length),0,item); save(); render(); });
+});}
 function lgSummaryLines(){
   return state.longGoals.slice()
     .sort((a,b)=>(b.due||'0000-00-00').localeCompare(a.due||'0000-00-00')||b.createdAt-a.createdAt) /* 先の日付が上、直近が下 */
@@ -1633,7 +1663,11 @@ function slotTapToggle(date,t,ev){
 }
 function setSheetCustom(date,i,v){const s=ensureSheet(date);const label=(state.scheduleTemplate.customFields||[])[i];if(label==null)return;if(!s.custom)s.custom={};s.custom[label]=v;save();}
 function setSheetScale(date,f,v){const s=ensureSheet(date);s[f]=v;save();render();}
-function deleteSheet(date){askConfirm(fmtDate(date)+' のシートを削除しますか？',()=>{delete state.schedules[date];save();subView=null;render();});}
+function deleteSheet(date){askConfirm(fmtDate(date)+' のシートを削除しますか？',()=>{
+  const item=state.schedules[date];
+  delete state.schedules[date];save();subView=null;render();
+  showUndo(fmtDate(date)+' のシートを削除しました',()=>{ state.schedules[date]=item; save(); render(); });
+});}
 function openSheet(date){ensureSheet(date);subView={type:'sheet',date};currentTab='schedule';syncTabbar();render();window.scrollTo(0,0);}
 function openSheetPicker(){
   openModal('<h3>日付を選ぶ</h3>'+
@@ -1956,7 +1990,12 @@ function setWeekly(id,field,value){
   w[field]=value; save();
   const p=document.getElementById('wkprev_'+id); if(p)p.textContent=weeklyPreviewText(id);
 }
-function deleteWeekly(id){askConfirm('この週の振り返りを削除しますか？',()=>{state.weeklyReviews=state.weeklyReviews.filter(x=>x.id!==id);save();subView=null;render();});}
+function deleteWeekly(id){askConfirm('この週の振り返りを削除しますか？',()=>{
+  const idx=state.weeklyReviews.findIndex(x=>x.id===id); if(idx<0)return;
+  const item=state.weeklyReviews[idx];
+  state.weeklyReviews.splice(idx,1);save();subView=null;render();
+  showUndo('週次振り返りを削除しました',()=>{ state.weeklyReviews.splice(Math.min(idx,state.weeklyReviews.length),0,item); save(); render(); });
+});}
 function wkGoalTable(id,field,obj){
   obj=obj||{};
   const rows=[['apo','アポ数'],['teian','提案数'],['shokai','紹介数']];
@@ -2059,7 +2098,9 @@ function setPerson(recId,listField,idx,field,value){
 }
 function removePerson(recId,listField,idx){
   const m=state.mtgs.find(x=>x.id===recId); if(!m)return;
+  const item=m[listField][idx];
   m[listField].splice(idx,1); save(); render();
+  showUndo('1件削除しました',()=>{ const mm=state.mtgs.find(x=>x.id===recId); if(mm){mm[listField].splice(Math.min(idx,mm[listField].length),0,item);save();render();} });
 }
 function addPerson(recId,listField){
   const m=state.mtgs.find(x=>x.id===recId); if(!m)return;
@@ -2128,7 +2169,12 @@ function addMtg(){
   subView={type:'mtgForm',id:m.id}; currentTab='mtg'; syncTabbar(); render(); window.scrollTo(0,0);
 }
 function setMtg(id,field,value){const m=state.mtgs.find(x=>x.id===id); if(m){m[field]=value; save();}}
-function deleteMtg(id){askConfirm('このMTG記録を削除しますか？',()=>{state.mtgs=state.mtgs.filter(x=>x.id!==id);save();subView=null;render();});}
+function deleteMtg(id){askConfirm('このMTG記録を削除しますか？',()=>{
+  const idx=state.mtgs.findIndex(x=>x.id===id); if(idx<0)return;
+  const item=state.mtgs[idx];
+  state.mtgs.splice(idx,1);save();subView=null;render();
+  showUndo('MTG記録を削除しました',()=>{ state.mtgs.splice(Math.min(idx,state.mtgs.length),0,item); save(); render(); });
+});}
 function memoMapFromList(list){const mp={};(list||[]).forEach(p=>{if(p.name&&p.memo)mp[p.name]=p.memo;});return mp;}
 function refreshAbdFromManage(id){
   const m=state.mtgs.find(x=>x.id===id); if(!m)return;
