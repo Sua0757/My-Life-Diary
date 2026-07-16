@@ -245,8 +245,8 @@ textarea.red, input.red{color:var(--red); font-weight:600;}
 .todo-item{display:flex; align-items:flex-start; gap:8px; padding:4px 0; font-size:calc(14px * var(--fs,1));}
 .todo-item input[type=checkbox]{width:20px; height:20px; margin-top:2px; accent-color:var(--indigo);}
 .todo-item.done span{color:var(--sub); text-decoration:line-through;}
-.scale-row{display:flex; gap:4px; flex-wrap:wrap; margin:4px 0 10px;}
-.scale-row button{width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:13px; cursor:pointer; font-family:inherit;}
+.scale-row{display:flex; gap:3px; flex-wrap:nowrap; margin:4px 0 10px;}
+.scale-row button{flex:1 1 0; min-width:0; width:auto; height:34px; padding:0; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:calc(13px * var(--fs,1)); cursor:pointer; font-family:inherit;}
 .scale-row button.on{background:var(--indigo); color:#fff; border-color:var(--indigo); font-weight:700;}
 .sheet-note{font-size:11.5px; color:var(--sub); line-height:1.6; margin:4px 0;}
 
