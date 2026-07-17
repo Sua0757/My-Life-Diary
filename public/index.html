@@ -528,6 +528,126 @@ async function flushQueue(){
 window.addEventListener('online',flushQueue);
 setInterval(()=>{if(navigator.onLine)flushQueue();},20000);
 
+/* ============================================================
+   クラウド自動取り込み（他端末の変更をこの端末へ反映）
+   ・アプリを開き直さなくても、前面に戻った時／通信復帰時／一定間隔で
+     クラウドの最新を取り込む。
+   ・アポ・紹介は「id で突き合わせて新しい方を採用」する安全なマージ。
+     （未同期のこの端末のデータを消さない／消したものは復活させない）
+   ・クラウドにだけ無いこの端末のデータは、取り込みのたびに再送信して
+     自己修復する（過去に送信し損ねたデータも次回で復旧）。
+   ・スケジュール・目標は「不足している分だけ足す」追加マージで、
+     編集中の内容を上書きしない。
+   ============================================================ */
+let lastLocalEditAt=0;   /* 直近にこの端末で編集した時刻（編集中の上書き回避に使う） */
+let _cloudRefreshing=false;
+/* id で突き合わせて新しい方を採用（trashed に入っている id は除外＝復活させない） */
+function mergeRowsById(localArr,cloudRows,trashed){
+  const byId={};
+  (localArr||[]).forEach(x=>{ if(x&&x.id&&!(trashed&&trashed.has(x.id))) byId[x.id]=x; });
+  (cloudRows||[]).forEach(r=>{
+    if(!r||!r.id)return;
+    if(trashed&&trashed.has(r.id))return;
+    const cloud=Object.assign({},r.data,{id:r.id});
+    const local=byId[r.id];
+    if(!local){ byId[r.id]=cloud; return; }
+    const lu=Number(local.updatedAt)||0, cu=Number(cloud.updatedAt)||0;
+    byId[r.id]= cu>lu ? cloud : local; /* 新しい方を採用。同時刻はこの端末を優先 */
+  });
+  return Object.values(byId);
+}
+async function pullMergeRows(){
+  if(!currentUser)return false;
+  let changed=false;
+  const trashedApo=new Set((state.trash||[]).filter(t=>t.kind==='apo').map(t=>t.payload&&t.payload.id).filter(Boolean));
+  const trashedRef=new Set((state.trash||[]).filter(t=>t.kind==='referral').map(t=>t.payload&&t.payload.id).filter(Boolean));
+  try{
+    const {data:apoRows,error}=await sb.from('apos').select('id,data').eq('user_id',currentUser.id);
+    if(!error&&apoRows){
+      const before=JSON.stringify(state.apos);
+      state.apos=mergeRowsById(state.apos,apoRows,trashedApo);
+      if(JSON.stringify(state.apos)!==before)changed=true;
+      const cloudIds=new Set(apoRows.map(r=>r.id));
+      /* クラウドに無いこの端末のアポを再送信（送信し損ねの自己修復） */
+      for(const a of state.apos){ if(a&&a.id&&!cloudIds.has(a.id)) syncApoRow(a.id); }
+      /* この端末で削除済み(ゴミ箱)なのにクラウドに残る行は掃除 */
+      for(const r of apoRows){ if(trashedApo.has(r.id)) deleteApoRow(r.id); }
+    }
+  }catch(e){}
+  try{
+    const {data:refRows,error}=await sb.from('referrals').select('id,data').eq('user_id',currentUser.id);
+    if(!error&&refRows){
+      const before=JSON.stringify(state.referrals);
+      state.referrals=mergeRowsById(state.referrals,refRows,trashedRef);
+      if(JSON.stringify(state.referrals)!==before)changed=true;
+      const cloudIds=new Set(refRows.map(r=>r.id));
+      for(const r of state.referrals){ if(r&&r.id&&!cloudIds.has(r.id)) syncReferralRow(r.id); }
+      for(const r of refRows){ if(trashedRef.has(r.id)) deleteReferralRow(r.id); }
+    }
+  }catch(e){}
+  return changed;
+}
+/* スケジュール・目標などは「不足分だけ足す」追加マージ（編集中を上書きしない） */
+async function pullBlobAdditive(){
+  if(!currentUser)return false;
+  let changed=false;
+  try{
+    const {data,error}=await sb.from('app_data').select('data').eq('user_id',currentUser.id).maybeSingle();
+    if(error||!data||!data.data)return false;
+    const cloud=data.data;
+    if(cloud.schedules){
+      state.schedules=state.schedules||{};
+      for(const k of Object.keys(cloud.schedules)){ if(!(k in state.schedules)){ state.schedules[k]=cloud.schedules[k]; changed=true; } }
+    }
+    ['longGoals','yearStartGoals','monthlyGoals','mtgs','weeklyReviews'].forEach(key=>{
+      if(Array.isArray(cloud[key])){
+        state[key]=state[key]||[];
+        const ids=new Set(state[key].map(x=>x&&x.id));
+        cloud[key].forEach(x=>{ if(x&&x.id&&!ids.has(x.id)){ state[key].push(x); changed=true; } });
+      }
+    });
+  }catch(e){}
+  return changed;
+}
+/* 前面復帰・通信復帰・一定間隔で呼ぶ自動取り込み。編集中は邪魔しない */
+async function cloudRefresh(){
+  if(!currentUser||!navigator.onLine||typeof shareMode!=='undefined'&&shareMode)return;
+  if(_cloudRefreshing)return;
+  /* 入力中（フォーカス中）や直近に編集したときは、上書き・カーソル移動を避けて見送る */
+  const ae=document.activeElement;
+  if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))return;
+  if(Date.now()-lastLocalEditAt<6000)return;
+  _cloudRefreshing=true;
+  try{
+    await flushQueue();                 /* まずこの端末の未送信を送る */
+    const c1=await pullMergeRows();      /* アポ・紹介を安全マージ */
+    const c2=await pullBlobAdditive();   /* スケジュール・目標の不足分を追加 */
+    if(c1||c2){ localCache.set(state); render(); }
+    setSyncStatus('ok','同期済み');
+  }catch(e){}
+  finally{ _cloudRefreshing=false; }
+}
+/* 手動：クラウドから最新を取り込む（設定画面のボタン用） */
+async function pullFromCloud(){
+  if(!currentUser){toast('ログインが必要です');return;}
+  if(!navigator.onLine){toast('電波の良い場所でお試しください');return;}
+  closeModal();
+  setSyncStatus('wait','取り込み中…');
+  try{
+    await flushQueue();
+    await pullMergeRows();
+    await pullBlobAdditive();
+    localCache.set(state); render();
+    setSyncStatus('ok','同期済み');
+    toast('クラウドから最新を取り込みました');
+  }catch(e){ setSyncStatus('wait','一部未同期'); toast('取り込みに失敗しました。電波の良い場所で再度お試しください'); }
+}
+/* 前面に戻った時・通信復帰時・一定間隔で自動取り込み */
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible')cloudRefresh(); });
+window.addEventListener('focus',cloudRefresh);
+window.addEventListener('online',cloudRefresh);
+setInterval(()=>{ if(navigator.onLine&&document.visibilityState==='visible')cloudRefresh(); },45000);
+
 function setSyncStatus(kind,label){
   const dot=document.getElementById('syncDot'), lab=document.getElementById('syncLabel');
   if(dot){dot.className='sync-dot '+kind;}
@@ -634,6 +754,7 @@ async function forcePushToCloud(){
 /* ---------- 全体の保存（ローカルは常に即保存、サーバーへは非同期で反映） ---------- */
 let saveTimer=null;
 function save(){
+  lastLocalEditAt=Date.now(); /* 自動取り込みが編集直後に上書きしないための目印 */
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{ localCache.set(state); queueAppDataSave(); maybeAutoSnapshot(); },200);
 }
@@ -1985,8 +2106,10 @@ function openSettings(){
   '<div class="field" style="margin-top:16px"><label>ゴミ箱（削除したデータの復元）</label>'+
   '<p class="hint">削除した項目は'+TRASH_DAYS+'日間ゴミ箱に保管され、ここから復元できます。</p>'+
   '<button class="btn ghost block" onclick="openTrash()">🗑 ゴミ箱を開く'+((state.trash&&state.trash.length)?'（'+state.trash.length+'件）':'')+'</button></div>'+
-  '<div class="field" style="margin-top:16px"><label>他の端末に反映されないとき</label>'+
-  '<p class="hint">この端末に表示されている内容で、クラウドを最新に更新します。押したあと、他の端末（スマホ／PC）をオンラインで開き直すと反映されます。<br>※ この端末の内容が優先されます。</p>'+
+  '<div class="field" style="margin-top:16px"><label>他の端末の内容が反映されないとき</label>'+
+  '<p class="hint">通常はアプリを前面に戻すと自動で最新に更新されますが、うまく反映されないときは下のボタンで手動で取り込めます。</p>'+
+  '<button class="btn primary block" onclick="pullFromCloud()">⬇ クラウドから最新を取り込む</button>'+
+  '<p class="hint" style="margin-top:12px">逆に、この端末の内容を他の端末へ反映したいときはこちら。<br>※ この端末の内容が優先されます。</p>'+
   '<button class="btn ghost block" onclick="forcePushToCloud()">☁ この端末の内容をクラウドへアップロード</button></div>'+
   '<div class="field" style="margin-top:16px"><label>データのバックアップ</label>'+
   '<p class="hint">データはサーバーに自動保存され、ログインしたどの端末からも同じ内容が見られます。念のための書き出しはこちらから。</p>'+
@@ -2579,7 +2702,7 @@ async function afterLogin(){
   if(navigator.onLine){
     setSyncStatus('wait','同期中…');
     const cloudStatus=await pullAppData();
-    await pullApposAndReferrals();
+    await pullMergeRows(); /* アポ・紹介はid突き合わせで安全にマージ（この端末の未同期分を消さない） */
     applySavedToState(state);
     localCache.set(state);
     render();
