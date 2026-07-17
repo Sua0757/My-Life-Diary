@@ -642,6 +642,48 @@ async function pullFromCloud(){
     toast('クラウドから最新を取り込みました');
   }catch(e){ setSyncStatus('wait','一部未同期'); toast('取り込みに失敗しました。電波の良い場所で再度お試しください'); }
 }
+/* 同期の診断：この端末とクラウドの状態を表示（Webとスマホでこ数字を見比べる） */
+async function openSyncDiag(){
+  const email=currentUser?currentUser.email:'（未ログイン）';
+  const uid8=currentUser?(currentUser.id||'').slice(0,8)+'…':'—';
+  const localApo=(state.apos||[]).length, localRef=(state.referrals||[]).length, localSched=Object.keys(state.schedules||{}).length;
+  const unsent=loadQueue().length;
+  openModal('<h3>🔧 同期の診断</h3>'+
+    '<p class="hint">この画面を<b>Webとスマホの両方</b>で開いて、数字を見比べてください。特に「ログイン中のアカウント」が両方で同じか確認してください（違う場合は別々の内容になります）。</p>'+
+    '<div class="summary-box" id="diagBox" style="white-space:pre-wrap;font-size:13px;line-height:1.7">確認しています…</div>'+
+    '<div class="btn-row" style="margin-top:12px"><button class="btn primary" style="flex:1" onclick="pullFromCloud()">⬇ 取り込む</button>'+
+    '<button class="btn ghost" style="flex:1" onclick="forcePushToCloud()">☁ 送る</button></div>'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
+  const box=document.getElementById('diagBox');
+  let L=[];
+  L.push('■ ログイン中のアカウント');
+  L.push('　'+email);
+  L.push('　（ID: '+uid8+'）');
+  L.push('');
+  L.push('■ この端末に今ある数');
+  L.push('　アポ：'+localApo+'件 ／ 紹介：'+localRef+'件 ／ スケジュール：'+localSched+'日');
+  L.push('　未送信の変更：'+unsent+'件');
+  L.push('');
+  L.push('■ クラウド（サーバー）にある数');
+  if(box)box.textContent=L.join('\n')+'\n　確認中…';
+  if(!currentUser){ L.push('　未ログインのため確認できません'); if(box)box.textContent=L.join('\n'); return; }
+  if(!navigator.onLine){ L.push('　オフラインのため確認できません'); if(box)box.textContent=L.join('\n'); return; }
+  async function cnt(tbl){
+    try{ const {count,error}=await sb.from(tbl).select('id',{count:'exact',head:true}).eq('user_id',currentUser.id);
+      if(error)return 'エラー（'+(error.message||error.code||'不明')+'）'; return (count==null?'?':count)+'件'; }
+    catch(e){ return '通信エラー'; }
+  }
+  const apoC=await cnt('apos');
+  const refC=await cnt('referrals');
+  let appC;
+  try{ const {data,error}=await sb.from('app_data').select('user_id').eq('user_id',currentUser.id).maybeSingle();
+    appC=error?('エラー（'+(error.message||error.code)+'）'):(data?'保存あり':'保存なし'); }
+  catch(e){ appC='通信エラー'; }
+  L.push('　アポ：'+apoC);
+  L.push('　紹介：'+refC);
+  L.push('　スケジュール等：'+appC);
+  if(box)box.textContent=L.join('\n');
+}
 /* 前面に戻った時・通信復帰時・一定間隔で自動取り込み */
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible')cloudRefresh(); });
 window.addEventListener('focus',cloudRefresh);
@@ -2110,7 +2152,8 @@ function openSettings(){
   '<p class="hint">通常はアプリを前面に戻すと自動で最新に更新されますが、うまく反映されないときは下のボタンで手動で取り込めます。</p>'+
   '<button class="btn primary block" onclick="pullFromCloud()">⬇ クラウドから最新を取り込む</button>'+
   '<p class="hint" style="margin-top:12px">逆に、この端末の内容を他の端末へ反映したいときはこちら。<br>※ この端末の内容が優先されます。</p>'+
-  '<button class="btn ghost block" onclick="forcePushToCloud()">☁ この端末の内容をクラウドへアップロード</button></div>'+
+  '<button class="btn ghost block" onclick="forcePushToCloud()">☁ この端末の内容をクラウドへアップロード</button>'+
+  '<button class="btn ghost block" style="margin-top:8px" onclick="openSyncDiag()">🔧 同期の状態を確認する（診断）</button></div>'+
   '<div class="field" style="margin-top:16px"><label>データのバックアップ</label>'+
   '<p class="hint">データはサーバーに自動保存され、ログインしたどの端末からも同じ内容が見られます。念のための書き出しはこちらから。</p>'+
   '<button class="btn ghost block" onclick="exportData()">⬇ バックアップを書き出し</button>'+
