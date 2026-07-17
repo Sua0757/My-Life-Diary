@@ -557,12 +557,14 @@ async function pushAppData(){
   }catch(e){queueOp({type:'app_data',op:'upsert',rowId:'blob',payload});}
 }
 async function pullAppData(){
-  if(!currentUser)return false;
+  if(!currentUser)return 'error';
   try{
     const {data,error}=await sb.from('app_data').select('data').eq('user_id',currentUser.id).maybeSingle();
-    if(!error&&data&&data.data){Object.assign(state,data.data);return true;}
-  }catch(e){/* オフライン時などは無視してローカルの内容を使う */}
-  return false;
+    if(error)return 'error';
+    if(data&&data.data){Object.assign(state,data.data);return 'has';}
+    return 'empty'; /* 行が本当に無い＝空 */
+  }catch(e){/* オフライン等はエラー扱い（上書きしない） */}
+  return 'error';
 }
 
 /* ---------- アポ記録・紹介者情報（1件ずつ個別に同期＝共有機能のため） ---------- */
@@ -2442,12 +2444,12 @@ async function afterLogin(){
   tryNotify();
   if(navigator.onLine){
     setSyncStatus('wait','同期中…');
-    const hadCloud=await pullAppData();
+    const cloudStatus=await pullAppData();
     await pullApposAndReferrals();
     applySavedToState(state);
     localCache.set(state);
     render();
-    if(!hadCloud){ await pushAllLocalToCloud(); } /* クラウドが空なら手元のデータで初期化（初回同期） */
+    if(cloudStatus==='empty'){ await pushAllLocalToCloud(); } /* クラウドが「本当に空」のときだけ手元データで初期化。エラー時は上書きしない */
     await flushQueue();
     setSyncStatus('ok','同期済み');
   }else{
