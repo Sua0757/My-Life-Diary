@@ -648,11 +648,12 @@ async function openSyncDiag(){
   const uid8=currentUser?(currentUser.id||'').slice(0,8)+'…':'—';
   const localApo=(state.apos||[]).length, localRef=(state.referrals||[]).length, localSched=Object.keys(state.schedules||{}).length;
   const unsent=loadQueue().length;
-  openModal('<h3>🔧 同期の診断</h3>'+
-    '<p class="hint">この画面を<b>Webとスマホの両方</b>で開いて、数字を見比べてください。特に「ログイン中のアカウント」が両方で同じか確認してください（違う場合は別々の内容になります）。</p>'+
+  openModal('<h3>🔧 同期のトラブル対応</h3>'+
+    '<p class="hint">「⬇ 取り込む」を押せば、たいていはこれで最新の内容が反映されます。まだ反映されない場合だけ、下の詳しい状態や「保存をテスト」をご確認ください。</p>'+
+    '<div class="btn-row" style="margin-top:6px"><button class="btn primary" style="flex:1" onclick="pullFromCloud()">⬇ クラウドから取り込む</button>'+
+    '<button class="btn ghost" style="flex:1" onclick="forcePushToCloud()">☁ クラウドへ送る</button></div>'+
+    '<p class="hint" style="margin-top:14px">下は詳しい状態です。解決しない時はサポートに伝えてください（Webとスマホの両方でこの画面を開いて見比べます）。</p>'+
     '<div class="summary-box" id="diagBox" style="white-space:pre-wrap;font-size:13px;line-height:1.7">確認しています…</div>'+
-    '<div class="btn-row" style="margin-top:12px"><button class="btn primary" style="flex:1" onclick="pullFromCloud()">⬇ 取り込む</button>'+
-    '<button class="btn ghost" style="flex:1" onclick="forcePushToCloud()">☁ 送る</button></div>'+
     '<div class="btn-row" style="margin-top:8px"><button class="btn danger block" onclick="testCloudWrite()">🧪 保存をテスト（本当のエラーを表示）</button></div>'+
     '<div class="btn-row" style="margin-top:8px"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
   const box=document.getElementById('diagBox');
@@ -2174,11 +2175,8 @@ function openSettings(){
   '<p class="hint">削除した項目は'+TRASH_DAYS+'日間ゴミ箱に保管され、ここから復元できます。</p>'+
   '<button class="btn ghost block" onclick="openTrash()">🗑 ゴミ箱を開く'+((state.trash&&state.trash.length)?'（'+state.trash.length+'件）':'')+'</button></div>'+
   '<div class="field" style="margin-top:16px"><label>他の端末の内容が反映されないとき</label>'+
-  '<p class="hint">通常はアプリを前面に戻すと自動で最新に更新されますが、うまく反映されないときは下のボタンで手動で取り込めます。</p>'+
-  '<button class="btn primary block" onclick="pullFromCloud()">⬇ クラウドから最新を取り込む</button>'+
-  '<p class="hint" style="margin-top:12px">逆に、この端末の内容を他の端末へ反映したいときはこちら。<br>※ この端末の内容が優先されます。</p>'+
-  '<button class="btn ghost block" onclick="forcePushToCloud()">☁ この端末の内容をクラウドへアップロード</button>'+
-  '<button class="btn ghost block" style="margin-top:8px" onclick="openSyncDiag()">🔧 同期の状態を確認する（診断）</button></div>'+
+  '<p class="hint">通常はアプリを前面に戻すだけで、他の端末の内容が自動的に反映されます。うまく反映されない時だけ、こちらから確認・手動操作できます。</p>'+
+  '<button class="btn ghost block" onclick="openSyncDiag()">🔧 同期のトラブル対応</button></div>'+
   '<div class="field" style="margin-top:16px"><label>データのバックアップ</label>'+
   '<p class="hint">データはサーバーに自動保存され、ログインしたどの端末からも同じ内容が見られます。念のための書き出しはこちらから。</p>'+
   '<button class="btn ghost block" onclick="exportData()">⬇ バックアップを書き出し</button>'+
