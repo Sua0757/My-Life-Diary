@@ -621,6 +621,15 @@ async function pushAllLocalToCloud(){
   for(const a of (state.apos||[])){ if(a&&a.id){ try{ await syncApoRow(a.id); }catch(e){} } }
   for(const r of (state.referrals||[])){ if(r&&r.id){ try{ await syncReferralRow(r.id); }catch(e){} } }
 }
+/* 手動：この端末の内容でクラウドを更新（他端末に反映されないときの復旧用） */
+async function forcePushToCloud(){
+  if(!currentUser){toast('ログインが必要です');return;}
+  if(!navigator.onLine){toast('電波の良い場所でお試しください');return;}
+  closeModal();
+  setSyncStatus('wait','アップロード中…');
+  try{ await pushAllLocalToCloud(); await flushQueue(); setSyncStatus('ok','同期済み'); toast('この端末の内容をクラウドへアップロードしました'); }
+  catch(e){ setSyncStatus('wait','一部未同期'); toast('アップロードに失敗しました。電波の良い場所で再度お試しください'); }
+}
 
 /* ---------- 全体の保存（ローカルは常に即保存、サーバーへは非同期で反映） ---------- */
 let saveTimer=null;
@@ -1973,6 +1982,9 @@ function openSettings(){
   '<div class="field" style="margin-top:16px"><label>ゴミ箱（削除したデータの復元）</label>'+
   '<p class="hint">削除した項目は'+TRASH_DAYS+'日間ゴミ箱に保管され、ここから復元できます。</p>'+
   '<button class="btn ghost block" onclick="openTrash()">🗑 ゴミ箱を開く'+((state.trash&&state.trash.length)?'（'+state.trash.length+'件）':'')+'</button></div>'+
+  '<div class="field" style="margin-top:16px"><label>他の端末に反映されないとき</label>'+
+  '<p class="hint">この端末に表示されている内容で、クラウドを最新に更新します。押したあと、他の端末（スマホ／PC）をオンラインで開き直すと反映されます。<br>※ この端末の内容が優先されます。</p>'+
+  '<button class="btn ghost block" onclick="forcePushToCloud()">☁ この端末の内容をクラウドへアップロード</button></div>'+
   '<div class="field" style="margin-top:16px"><label>データのバックアップ</label>'+
   '<p class="hint">データはサーバーに自動保存され、ログインしたどの端末からも同じ内容が見られます。念のための書き出しはこちらから。</p>'+
   '<button class="btn ghost block" onclick="exportData()">⬇ バックアップを書き出し</button></div>'+
