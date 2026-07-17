@@ -635,7 +635,7 @@ async function forcePushToCloud(){
 let saveTimer=null;
 function save(){
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{ localCache.set(state); queueAppDataSave(); },200);
+  saveTimer=setTimeout(()=>{ localCache.set(state); queueAppDataSave(); maybeAutoSnapshot(); },200);
 }
 
 
@@ -1979,6 +1979,9 @@ function openSettings(){
     return '<p class="hint">押すと「見るだけ（編集不可）」のリンクを作れます。特定の人にだけURLを渡して共有できます。</p>'+
       '<button class="btn ghost block" onclick="createShareLink()">🔗 閲覧専用リンクを発行</button>';
   })()+'</div>'+
+  '<div class="field" style="margin-top:16px"><label>自動バックアップ（過去の状態に戻す）</label>'+
+  '<p class="hint">この端末には、使うたびに過去の状態が自動保存されています。データが消えたり間違えて変更したときは、ここから過去の世代を選んで元に戻せます。</p>'+
+  '<button class="btn ghost block" onclick="openSnapshots()">🕑 自動バックアップから復元'+((function(){var n=loadSnaps().length;return n?'（'+n+'世代）':'';})())+'</button></div>'+
   '<div class="field" style="margin-top:16px"><label>ゴミ箱（削除したデータの復元）</label>'+
   '<p class="hint">削除した項目は'+TRASH_DAYS+'日間ゴミ箱に保管され、ここから復元できます。</p>'+
   '<button class="btn ghost block" onclick="openTrash()">🗑 ゴミ箱を開く'+((state.trash&&state.trash.length)?'（'+state.trash.length+'件）':'')+'</button></div>'+
@@ -2044,6 +2047,7 @@ function importData(){
       let data=null;
       try{ data=JSON.parse(reader.result); }catch(e){ toast('ファイルの形式が正しくありません'); return; }
       if(!data||typeof data!=='object'){ toast('ファイルを読み込めませんでした'); return; }
+      snapshotNow('ファイル復元の前',true); /* 復元前の状態も自動バックアップに残す */
       applySavedToState(data);
       localCache.set(state);
       closeModal(); currentTab='schedule'; subView=null; render();
@@ -2057,8 +2061,100 @@ function importData(){
   };
   inp.click();
 }
+/* ============================================================
+   自動バックアップ（この端末に「世代スナップショット」を自動保存）
+   目的：クラウド同期の不具合や誤操作でデータが消えても、
+        端末内に自動保存された過去の状態からいつでも戻せるようにする。
+   ・アプリ起動時、および利用中に一定間隔で、その時点の全データを自動保存。
+   ・中身が前回と同じ／間隔が近すぎるものは保存しない（貯めすぎ防止）。
+   ・最大 SNAP_MAX 世代・約 SNAP_KEEP_DAYS 日ぶんを保管し、古いものは自動削除。
+   ============================================================ */
+const SNAP_MAX=10;                 /* 保管する世代数の上限 */
+const SNAP_KEEP_DAYS=30;           /* これより古い世代は自動削除 */
+const SNAP_MIN_GAP_MS=2*3600000;   /* 自動保存はこの間隔以上あける（2時間） */
+let _snapThrottle=0;               /* 直近の自動保存を試みた時刻（メモリ上） */
+function snapKey(){return 'mylife-snap-'+(currentUser?currentUser.id:'guest');}
+function loadSnaps(){try{const v=localStorage.getItem(snapKey());return v?JSON.parse(v):[];}catch(e){return [];}}
+function saveSnaps(arr){
+  try{ localStorage.setItem(snapKey(),JSON.stringify(arr)); return true; }
+  catch(e){
+    /* 端末の保存容量オーバー：古い世代から捨てて再挑戦 */
+    while(arr.length>1){ arr.pop(); try{ localStorage.setItem(snapKey(),JSON.stringify(arr)); return true; }catch(_){} }
+    return false;
+  }
+}
+function snapCounts(d){
+  d=d||{};
+  const sched=d.schedules?Object.keys(d.schedules).length:0;
+  const goals=(d.longGoals?d.longGoals.length:0)+(d.yearStartGoals?d.yearStartGoals.length:0)+(d.monthlyGoals?d.monthlyGoals.length:0);
+  return {apo:(d.apos?d.apos.length:0), sched:sched, ref:(d.referrals?d.referrals.length:0), goal:goals, mtg:(d.mtgs?d.mtgs.length:0)};
+}
+function snapIsEmpty(c){return !c.apo&&!c.sched&&!c.ref&&!c.goal&&!c.mtg;}
+/* 今の状態を1世代として保存。force=trueで間隔・重複チェックを無視して必ず保存 */
+function snapshotNow(reason,force){
+  try{
+    const str=JSON.stringify(state);
+    const data=JSON.parse(str);
+    const c=snapCounts(data);
+    if(snapIsEmpty(c)&&!force)return;            /* 空データは自動保存しない */
+    let arr=loadSnaps();
+    const last=arr[0];
+    if(last&&!force&&JSON.stringify(last.data)===str)return; /* 中身が前回と全く同じなら保存しない */
+    arr.unshift({ts:Date.now(), reason:reason||'', counts:c, data:data});
+    /* 古い世代・上限を超える世代を削除（最新は必ず残す） */
+    const cutoff=Date.now()-SNAP_KEEP_DAYS*86400000;
+    arr=arr.filter((s,i)=>i===0||(s.ts||0)>cutoff);
+    if(arr.length>SNAP_MAX)arr=arr.slice(0,SNAP_MAX);
+    saveSnaps(arr);
+    _snapThrottle=Date.now();
+  }catch(e){}
+}
+/* 利用中の自動保存：save()から呼ぶ。メモリ上の間隔チェックで負荷を抑える */
+function maybeAutoSnapshot(){
+  if(Date.now()-_snapThrottle<SNAP_MIN_GAP_MS)return;
+  _snapThrottle=Date.now();
+  snapshotNow('自動保存');
+}
+function fmtSnapTime(ts){
+  const d=new Date(ts);
+  const w=['日','月','火','水','木','金','土'][d.getDay()];
+  return (d.getMonth()+1)+'月'+d.getDate()+'日（'+w+'）'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+async function restoreSnap(ts){
+  const arr=loadSnaps();
+  const s=arr.find(x=>x.ts===ts); if(!s){toast('この世代は見つかりませんでした');return;}
+  const c=s.counts||snapCounts(s.data);
+  askConfirm(fmtSnapTime(s.ts)+' の状態に戻します。\n（アポ'+c.apo+'・スケジュール'+c.sched+'日・紹介'+c.ref+'・目標'+c.goal+'）\n今の内容はこの世代の内容で置き換わります。よろしいですか？',async()=>{
+    snapshotNow('復元前',true);      /* 復元する直前の状態も一応残しておく */
+    applySavedToState(JSON.parse(JSON.stringify(s.data)));
+    localCache.set(state);
+    closeModal(); currentTab='schedule'; subView=null; render();
+    if(navigator.onLine){
+      setSyncStatus('wait','復元をアップロード中…');
+      try{ await pushAllLocalToCloud(); await flushQueue(); setSyncStatus('ok','同期済み'); }catch(e){ setSyncStatus('wait','一部未同期'); }
+    }
+    toast('自動バックアップから復元しました');
+  });
+}
+function openSnapshots(){
+  const arr=loadSnaps();
+  const rows=arr.length?arr.map(s=>{
+    const c=s.counts||snapCounts(s.data);
+    return '<div class="trash-row">'+
+      '<div class="trash-info"><div class="trash-title">'+esc(fmtSnapTime(s.ts))+(s.reason?' <span style="font-weight:400;color:var(--muted);font-size:12px">'+esc(s.reason)+'</span>':'')+'</div>'+
+      '<div class="trash-sub">アポ'+c.apo+'・スケジュール'+c.sched+'日・紹介'+c.ref+'・目標'+c.goal+(c.mtg?'・MTG'+c.mtg:'')+'</div></div>'+
+      '<div class="trash-acts"><button class="btn subtle small" onclick="restoreSnap('+s.ts+')">↩ 復元</button></div>'+
+    '</div>';
+  }).join(''):'<div class="empty" style="padding:14px">まだ自動バックアップはありません。<br>アプリを使うと自動的に保存されます。</div>';
+  openModal('<h3>🕑 自動バックアップから復元</h3>'+
+    '<p class="hint">この端末には過去の状態が自動保存されています。データが消えたり間違えて変更したときは、下の世代を選んで元に戻せます。（最大'+SNAP_MAX+'世代・約'+SNAP_KEEP_DAYS+'日間保管）</p>'+
+    '<div class="btn-row" style="margin-bottom:10px"><button class="btn ghost small" onclick="snapshotNow(\'手動保存\',true);toast(\'今の状態を保存しました\');openSnapshots()">＋ 今すぐ保存</button></div>'+
+    '<div class="trash-list">'+rows+'</div>'+
+    '<div class="btn-row" style="margin-top:12px"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
+}
 function resetAll(){
   askConfirm('本当にすべてのデータを削除しますか？この操作は元に戻せません。',async()=>{
+    snapshotNow('全データ初期化の前',true); /* 初期化前の状態を自動バックアップに残す */
     const ids=state.apos.map(a=>a.id); const rids=state.referrals.map(r=>r.id);
     state=defaultState(); save();
     for(const id of ids)deleteApoRow(id);
@@ -2476,6 +2572,7 @@ async function afterLogin(){
   const cached=localCache.get();
   applySavedToState(cached);
   purgeTrash(); /* 期限切れのゴミ箱項目を自動削除 */
+  snapshotNow('起動時'); /* 同期の前に、この端末の内容を自動バックアップ（万一の上書きに備える） */
   showApp();
   render();
   tryNotify();
@@ -2486,6 +2583,7 @@ async function afterLogin(){
     applySavedToState(state);
     localCache.set(state);
     render();
+    snapshotNow('同期後'); /* クラウドから取得した最新の状態も世代として保存（中身が変わったときだけ） */
     if(cloudStatus==='empty'){ await pushAllLocalToCloud(); } /* クラウドが「本当に空」のときだけ手元データで初期化。エラー時は上書きしない */
     await flushQueue();
     setSyncStatus('ok','同期済み');
