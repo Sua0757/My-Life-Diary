@@ -461,13 +461,18 @@ table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--
    ============================================================ */
 /* ---------- サービスワーカー登録（オフライン起動用＋新版の自動更新） ---------- */
 if('serviceWorker' in navigator){
-  let _swRefreshing=false;
+  let _swRefreshing=false, _swReg=null;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
     if(_swRefreshing)return; _swRefreshing=true; window.location.reload(); /* 新しい版が有効になったら自動で読み込み直す */
   });
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').then(reg=>{ try{reg.update();}catch(e){} }).catch(()=>{});
+    navigator.serviceWorker.register('sw.js').then(reg=>{ _swReg=reg; try{reg.update();}catch(e){} }).catch(()=>{});
   });
+  /* アプリを閉じずに開きっぱなしでも、新しい版に自動で気づけるように定期・復帰時にもチェックする */
+  function checkForUpdate(){ if(_swReg&&navigator.onLine){ try{_swReg.update();}catch(e){} } }
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible')checkForUpdate(); });
+  window.addEventListener('focus',checkForUpdate);
+  setInterval(checkForUpdate,20*60000); /* 20分ごと */
 }
 /* ---------- Supabase 接続設定 ---------- */
 const SUPABASE_URL='https://zgeakzkwqwcmiuvgjmwy.supabase.co';
