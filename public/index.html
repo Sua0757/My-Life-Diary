@@ -653,6 +653,7 @@ async function openSyncDiag(){
     '<div class="summary-box" id="diagBox" style="white-space:pre-wrap;font-size:13px;line-height:1.7">確認しています…</div>'+
     '<div class="btn-row" style="margin-top:12px"><button class="btn primary" style="flex:1" onclick="pullFromCloud()">⬇ 取り込む</button>'+
     '<button class="btn ghost" style="flex:1" onclick="forcePushToCloud()">☁ 送る</button></div>'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn danger block" onclick="testCloudWrite()">🧪 保存をテスト（本当のエラーを表示）</button></div>'+
     '<div class="btn-row" style="margin-top:8px"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
   const box=document.getElementById('diagBox');
   let L=[];
@@ -683,6 +684,30 @@ async function openSyncDiag(){
   L.push('　紹介：'+refC);
   L.push('　スケジュール等：'+appC);
   if(box)box.textContent=L.join('\n');
+}
+/* 実際にテスト用の行を1件保存してみて、Supabaseが返す「本当のエラー」をそのまま表示する */
+async function testCloudWrite(){
+  const box=document.getElementById('diagBox');
+  if(!currentUser){toast('ログインが必要です');return;}
+  const testId='__synctest_'+Date.now();
+  let out=['■ 保存テスト結果',''];
+  try{
+    const {error}=await sb.from('apos').upsert({id:testId,user_id:currentUser.id,data:{test:true}},{onConflict:'id'});
+    if(error){
+      out.push('❌ apos への保存：失敗');
+      out.push('　code: '+(error.code||'—'));
+      out.push('　message: '+(error.message||'—'));
+      out.push('　details: '+(error.details||'—'));
+      out.push('　hint: '+(error.hint||'—'));
+    }else{
+      out.push('✅ apos への保存：成功');
+      try{ await sb.from('apos').delete().eq('id',testId).eq('user_id',currentUser.id); out.push('（テスト用データは削除しました）'); }catch(e){}
+    }
+  }catch(e){
+    out.push('❌ apos への保存：通信エラー');
+    out.push('　'+(e&&e.message?e.message:String(e)));
+  }
+  if(box)box.textContent=out.join('\n');
 }
 /* 前面に戻った時・通信復帰時・一定間隔で自動取り込み */
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible')cloudRefresh(); });
