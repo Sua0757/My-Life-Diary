@@ -255,10 +255,16 @@ textarea.red, input.red{color:var(--red); font-weight:600;}
 
 /* management table */
 .tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--line); border-radius:var(--radius); background:#fff;}
-table.mng{border-collapse:collapse; width:100%; min-width:900px; font-size:12.5px;}
-table.mng th{background:var(--indigo-deep); color:#fff; padding:7px 8px; text-align:left; white-space:nowrap; font-size:11.5px; letter-spacing:.03em; position:sticky; top:0;}
-table.mng td{border-bottom:1px solid var(--line); padding:5px 8px; white-space:nowrap; vertical-align:middle;}
+/* アポ管理の表：見出し行と名前列を固定（フリーズ）する。表だけを内部スクロールさせる */
+.tbl-wrap.mng-wrap{overflow:auto; max-height:calc(100vh - 240px); max-height:calc(100dvh - 240px); min-height:220px;}
+table.mng{border-collapse:separate; border-spacing:0; width:100%; min-width:900px; font-size:12.5px;}
+table.mng th{background:var(--indigo-deep); color:#fff; padding:7px 8px; text-align:left; white-space:nowrap; font-size:11.5px; letter-spacing:.03em; position:sticky; top:0; z-index:5;}
+table.mng td{border-bottom:1px solid var(--line); padding:5px 8px; white-space:nowrap; vertical-align:middle; background:#fff;}
 table.mng tr:nth-child(even) td{background:var(--soft2);}
+/* 名前列を左に固定 */
+table.mng th.stick, table.mng td.stick{position:sticky; left:0; box-shadow:2px 0 0 var(--line);}
+table.mng th.stick{z-index:6;}
+table.mng td.stick{z-index:4;}
 table.mng select{padding:4px 6px; font-size:12.5px; width:auto; min-width:60px;}
 .abcd-A{color:var(--green); font-weight:800;} .abcd-B{color:var(--indigo); font-weight:800;}
 .abcd-C{color:var(--sub); font-weight:800;} .abcd-D{color:var(--amber); font-weight:800;}
@@ -1316,9 +1322,9 @@ function setApoCell(id,field,value,el){
 }
 /* 表の横スクロール位置を保ったまま再描画（イベント編集後などに使用） */
 function renderKeepTableScroll(){
-  const w=document.querySelector('.tbl-wrap'); const x=w?w.scrollLeft:0; const y=window.scrollY;
+  const w=document.querySelector('.tbl-wrap'); const x=w?w.scrollLeft:0; const t=w?w.scrollTop:0; const y=window.scrollY;
   render();
-  const w2=document.querySelector('.tbl-wrap'); if(w2)w2.scrollLeft=x; window.scrollTo(0,y);
+  const w2=document.querySelector('.tbl-wrap'); if(w2){w2.scrollLeft=x; w2.scrollTop=t;} window.scrollTo(0,y);
 }
 /* ---------- 月・年の選択（現在の月/年を初期表示し、過去・未来は選択式） ---------- */
 function thisMonthKey(){return today().slice(0,7);}
@@ -1705,7 +1711,7 @@ function manageRow(a,no){
     '<td>'+esc(a.apoDate||'')+'</td>'+
     '<td>'+sel('star',['★','☆'],a.star)+'</td>'+
     '<td>'+esc(a.nameKana||toKatakana(a.name||''))+'</td>'+
-    '<td style="cursor:pointer;color:var(--indigo-deep);font-weight:700" onclick="openApoForm(\''+a.id+'\')">'+esc(a.name||'（未入力）')+'</td>'+
+    '<td class="stick" style="cursor:pointer;color:var(--indigo-deep);font-weight:700" onclick="openApoForm(\''+a.id+'\')">'+esc(a.name||'（未入力）')+'</td>'+
     '<td class="abcd-'+esc(a.abcd)+'">'+sel('abcd',['A','B','C','D'],a.abcd)+'</td>'+
     '<td>'+(a.age!==''?grownNumber(a.age,a.ageYear):'')+'</td>'+
     '<td>'+(a.exp!==''?grownNumber(a.exp,a.expYear):'')+'</td>'+
@@ -1722,22 +1728,22 @@ function manageRow(a,no){
 function manageView(){
   const apos=state.apos.filter(a=>(Number(a.count)||1)===1).slice().sort((a,b)=>b.updatedAt-a.updatedAt); /* 1回目のアポのみ・更新が新しい順 */
   const mode=state.ui.mngView||'order';
-  const head='<tr><th>No</th><th>日付</th><th>★</th><th>名前（カタカナ）</th><th>名前</th><th>ABCD</th><th>年齢</th><th>経験年数</th><th>年収</th><th>仕事</th><th>開発・構築</th><th>直紹介</th><th>イベント</th><th>スキルシート</th><th>紹介</th><th>削除</th></tr>';
+  const head='<tr><th>No</th><th>日付</th><th>★</th><th>名前（カタカナ）</th><th class="stick">名前</th><th>ABCD</th><th>年齢</th><th>経験年数</th><th>年収</th><th>仕事</th><th>開発・構築</th><th>直紹介</th><th>イベント</th><th>スキルシート</th><th>紹介</th><th>削除</th></tr>';
   let body='';
   if(!apos.length){body='<div class="empty">アポ記録を作成すると、ここに自動で一覧が作られます。</div>';}
   else if(mode==='order'){
-    body='<div class="tbl-wrap"><table class="mng">'+head+apos.map((a,i)=>manageRow(a,i+1)).join('')+'</table></div>';
+    body='<div class="tbl-wrap mng-wrap"><table class="mng">'+head+apos.map((a,i)=>manageRow(a,i+1)).join('')+'</table></div>';
   }else{
     body=['A','B','C','D',''].map(g=>{
       const rows=apos.filter(a=>(a.abcd||'')===g);
       if(!rows.length)return '';
       return '<div class="month-head"><span class="tab">'+(g?esc(ABCD_LABEL[g]):'未分類')+'</span><span class="cnt">'+rows.length+'名</span></div>'+
-        '<div class="tbl-wrap" style="margin-bottom:14px"><table class="mng">'+head+rows.map((a,i)=>manageRow(a,i+1)).join('')+'</table></div>';
+        '<div class="tbl-wrap mng-wrap" style="margin-bottom:14px"><table class="mng">'+head+rows.map((a,i)=>manageRow(a,i+1)).join('')+'</table></div>';
     }).join('');
   }
   return '<h2 class="page">アポ管理 <small>全'+apos.length+'件・更新が新しい順</small></h2>'+
     '<div class="seg"><button class="'+(mode==='order'?'on':'')+'" onclick="state.ui.mngView=\'order\';save();render()">更新順リスト</button><button class="'+(mode==='abcd'?'on':'')+'" onclick="state.ui.mngView=\'abcd\';save();render()">ABCD別リスト</button></div>'+
-    '<p class="hint" style="margin-bottom:8px">1回目のアポの方のみ一覧に表示されます（複製で作った2回目以降のアポは、同じ方としてすでに載っているため表示されません）。<br>★：稼働中　☆：参画予定<br>A：紹介済み　B：紹介末/いい人　C：今は違う/断られた　D：FPでアプローチ<br>表は横にスクロールできます。ABCD・直紹介・イベント・スキルシートは表の中で直接変更できます。</p>'+
+    '<p class="hint" style="margin-bottom:8px">1回目のアポの方のみ一覧に表示されます（複製で作った2回目以降のアポは、同じ方としてすでに載っているため表示されません）。<br>★：稼働中　☆：参画予定<br>A：紹介済み　B：紹介末/いい人　C：今は違う/断られた　D：FPでアプローチ<br>表は横にスクロールできます（見出しと「名前」の列は固定されて動きません）。ABCD・直紹介・イベント・スキルシートは表の中で直接変更できます。</p>'+
     body;
 }
 
