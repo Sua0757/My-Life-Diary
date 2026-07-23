@@ -1774,6 +1774,11 @@ function delLG(id){askConfirm('この目標を削除しますか？',()=>{
 function futureSelfForYear(year){
   return state.futureSelf.filter(f=>String(f.year)===String(year)).sort((a,b)=>(Number(a.n)||0)-(Number(b.n)||0)||a.createdAt-b.createdAt);
 }
+/* プレビュー用：内容が入っている欄だけ「○年後の自分」＋改行＋本文の形で返す */
+function futureSelfLines(year){
+  return futureSelfForYear(year).filter(f=>f.text&&f.text.trim())
+    .map(f=>(f.n?f.n+'年後の自分\n':'')+f.text);
+}
 /* その年度の欄が1つも無ければ「1年後・2年後・3年後」を自動で用意する（初回だけ） */
 function ensureFutureSelf(year){
   if(futureSelfForYear(year).length)return;
@@ -1827,11 +1832,12 @@ function goalLines(arr){
     .map(lgText).filter(Boolean);
 }
 function lgSummaryLines(){ return goalLines(state.longGoals); }
-function goalPreviewBox(arr){
-  const lines=goalLines(arr);
-  if(!lines.length)return '';
+/* 複数行のテキストをまとめてプレビュー表示（各項目の間は空行で区切る） */
+function textPreviewBox(lines){
+  if(!lines||!lines.length)return '';
   return '<div class="summary-box goal-preview" style="font-weight:700;line-height:2;color:var(--indigo-deep)">'+esc(lines.join('\n\n'))+'</div>';
 }
+function goalPreviewBox(arr){ return textPreviewBox(goalLines(arr)); }
 function lgSummaryBox(){ return goalPreviewBox(state.longGoals); }
 function lgYear(g){return g.due?g.due.slice(0,4):String(thisYear());}
 function goalView(){
@@ -1904,15 +1910,16 @@ function goalView(){
       '</label></div>'+
       '<div class="voice-wrap"><textarea id="fs_'+f.id+'" placeholder="目標を入力" oninput="setFutureSelfField(\''+f.id+'\',\'text\',this.value)">'+esc(f.text)+'</textarea>'+micBtn('fs_'+f.id)+'</div>'+
       '</div>';
-    body='<div class="section-label" style="margin-top:2px">年度初めの目標</div>'+
-      '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addYearStartGoal()">＋ 年度初めの目標を追加</button></div>'+
-      '<p class="hint">年度の初めに立てる目標です。長期目標と同じ形で、期限（任意）と内容を記入できます。</p>'+
-      ysHtml+
-      (yearYs.length?'<div class="section-label">全体プレビュー</div>'+goalPreviewBox(yearYs):'')+
-      '<div class="section-label">○年後の自分</div>'+
+    const combinedPreviewLines=goalLines(yearYs).concat(futureSelfLines(curYear));
+    body='<div class="section-label" style="margin-top:2px">○年後の自分</div>'+
       '<p class="hint">数字は自由に変えられます（例：1→5年後）。'+curYear+'年度の欄です。</p>'+
       fsList.map(fsCard).join('')+
-      '<div class="btn-row" style="margin-top:10px"><button class="btn ghost block" onclick="addFutureSelf(\''+curYear+'\')">＋ 欄を追加</button></div>';
+      '<div class="btn-row" style="margin-top:10px"><button class="btn ghost block" onclick="addFutureSelf(\''+curYear+'\')">＋ 欄を追加</button></div>'+
+      '<div class="section-label">年度初めの目標</div>'+
+      '<p class="hint">年度の初めに立てる目標です。長期目標と同じ形で、期限（任意）と内容を記入できます。</p>'+
+      ysHtml+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addYearStartGoal()">＋ 年度初めの目標を追加</button></div>'+
+      (combinedPreviewLines.length?'<div class="section-label">全体プレビュー</div>'+textPreviewBox(combinedPreviewLines):'');
   }else{
     body='<div class="section-label" style="margin-top:2px">今月の目標と結果</div>'+
       '<div class="btn-row"><button class="btn primary block" onclick="addMonthlyGoal()">＋ 今月の目標表を追加</button></div>'+
