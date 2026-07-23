@@ -1508,24 +1508,17 @@ function apoFormView(id){
 /* ============================================================
    紹介者情報
    ============================================================ */
+/* アポ記録の「着地」の内容を、要約せずそのまま反映する（改行・全文を保持） */
 function summarizeApo(a){
   if(!a)return '';
   const name=(a.name||'').trim();
   const recs=(name?state.apos.filter(x=>(x.name||'').trim()===name):[a])
     .slice().sort((x,y)=>(((x.apoDate||'')+'_'+x.createdAt)).localeCompare(((y.apoDate||'')+'_'+y.createdAt))); /* 古い→新しい */
-  const lines=[];
-  recs.forEach(r=>{
-    const land=(r.landing||'').replace(/\s+/g,' ').trim();
-    if(!land)return;
-    const t=land.length>140?land.slice(0,140)+'…':land;
-    lines.push('（'+(r.count||'?')+'回目）'+t);
-  });
-  if(!lines.length)return '（アポ記録の「着地」が未記入のため要約できません。着地を記入してから「再生成」を押してください）';
-  if(lines.length===1){
-    const only=(recs.find(r=>(r.landing||'').trim())||{}).landing.replace(/\s+/g,' ').trim();
-    return only.length>160?only.slice(0,160)+'…':only;
-  }
-  return lines.join('\n');
+  const withLand=recs.filter(r=>(r.landing||'').trim());
+  if(!withLand.length)return '（アポ記録の「着地」が未記入です。着地を記入してから「再反映」を押してください）';
+  if(withLand.length===1)return (withLand[0].landing||'').trim();
+  /* 同じ人で複数回のアポがある場合は、回ごとに見出しを付けて全文をそのまま並べる */
+  return withLand.map(r=>'（'+(r.count||'?')+'回目）\n'+(r.landing||'').trim()).join('\n\n');
 }
 function createRefFromApo(apoId){
   const a=state.apos.find(x=>x.id===apoId); if(!a)return;
@@ -1647,8 +1640,8 @@ function refFormView(id){
     F('仕事',ro(joinVal(a.jobSel,a.job))+vText('r_jobExtra_'+id,r.jobExtra,'追記があれば入力','oninput="setRef(\''+id+'\',\'jobExtra\',this.value)"'),'アポ記録から自動＋追記可')+
     F('開発・構築の有無',ro(joinVal(a.devSel,a.dev)),'アポ記録から自動')+
     F('経験年数',ro(a.exp!==''?'約'+grownNumber(a.exp,a.expYear)+'年':''),'アポ記録から自動')+
-    F('詳細',vArea('r_detail_'+id,r.detail,'','', 'oninput="setRef(\''+id+'\',\'detail\',this.value)"'),'アポ記録の「着地」から要約を自動生成。文言の手直しもできます')+
-    '<div class="btn-row"><button class="btn subtle small" onclick="setRef(\''+id+'\',\'detail\',summarizeApo(state.apos.find(x=>x.id===\''+r.apoId+'\')||{}));render()">↺ 最新の「着地」から要約を再生成</button></div>'+
+    F('詳細',vArea('r_detail_'+id,r.detail,'','', 'oninput="setRef(\''+id+'\',\'detail\',this.value)"'),'アポ記録の「着地」の内容をそのまま反映。文言の手直しもできます')+
+    '<div class="btn-row"><button class="btn subtle small" onclick="setRef(\''+id+'\',\'detail\',summarizeApo(state.apos.find(x=>x.id===\''+r.apoId+'\')||{}));render()">↺ 最新の「着地」を反映</button></div>'+
     F('その他友人情報',vArea('r_friendInfo_'+id,r.friendInfo,'','', 'oninput="setRef(\''+id+'\',\'friendInfo\',this.value)"'))+
     F('要望',vArea('r_request_'+id,r.request||'','','', 'oninput="setRef(\''+id+'\',\'request\',this.value)"'))+
     F('紹介の着地',selText('refLanding','refLandingSel','refLanding','紹介の着地'))+
