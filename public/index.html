@@ -607,7 +607,7 @@ async function pullBlobAdditive(){
       state.schedules=state.schedules||{};
       for(const k of Object.keys(cloud.schedules)){ if(!(k in state.schedules)){ state.schedules[k]=cloud.schedules[k]; changed=true; } }
     }
-    ['longGoals','yearStartGoals','monthlyGoals','mtgs','weeklyReviews'].forEach(key=>{
+    ['longGoals','yearStartGoals','futureSelf','monthlyGoals','mtgs','weeklyReviews'].forEach(key=>{
       if(Array.isArray(cloud[key])){
         state[key]=state[key]||[];
         const ids=new Set(state[key].map(x=>x&&x.id));
@@ -862,7 +862,7 @@ function defaultState(){
       todo2:['❶X投稿50件'],
       metrics:['紹介数（イベント動員数含む）','金塚さんに繋げる提案数','親友アポ数','LINE交換数','①SE外アポ数','②SEアポ数','アポ数合計（①②）']
     },
-    longGoals:[], yearStartGoals:[], monthlyGoals:[], weeklyReviews:[], mtgs:[], trash:[],
+    longGoals:[], yearStartGoals:[], futureSelf:[], monthlyGoals:[], weeklyReviews:[], mtgs:[], trash:[],
     carry:{longGoal:'', monthGoal:'', startW:'', endW:'', metricGoals:{}},
     ui:{apoView:'month', mngView:'order', fontSize:'small'}
   };
@@ -915,6 +915,7 @@ function restoreByKind(kind,p){
     case 'monthlyGoal': if(!state.monthlyGoals.some(x=>x.id===p.id))state.monthlyGoals.push(p); break;
     case 'longGoal': if(!(state.longGoals||[]).some(x=>x.id===p.id)){state.longGoals=state.longGoals||[];state.longGoals.push(p);} break;
     case 'yearStartGoal': if(!(state.yearStartGoals||[]).some(x=>x.id===p.id)){state.yearStartGoals=state.yearStartGoals||[];state.yearStartGoals.push(p);} break;
+    case 'futureSelf': if(!(state.futureSelf||[]).some(x=>x.id===p.id)){state.futureSelf=state.futureSelf||[];state.futureSelf.push(p);} break;
     case 'mtg': if(!state.mtgs.some(x=>x.id===p.id))state.mtgs.push(p); break;
     case 'weekly': if(!state.weeklyReviews.some(x=>x.id===p.id))state.weeklyReviews.push(p); break;
     case 'person': { const m=state.mtgs.find(x=>x.id===p.recId); if(m){ if(!m[p.listField])m[p.listField]=[]; m[p.listField].push(p.person);} break; }
@@ -948,7 +949,7 @@ function emptyTrash(){
     state.trash=[]; save(); openTrash();
   });
 }
-const TRASH_KIND_LABEL={apo:'アポ記録',referral:'紹介者情報',sheet:'スケジュール',monthlyGoal:'今月の目標表',longGoal:'長期目標',yearStartGoal:'年度初めの目標',mtg:'個別MTG',weekly:'週次振り返り',person:'MTGの箇条書き'};
+const TRASH_KIND_LABEL={apo:'アポ記録',referral:'紹介者情報',sheet:'スケジュール',monthlyGoal:'今月の目標表',longGoal:'長期目標',yearStartGoal:'年度初めの目標',futureSelf:'○年後の自分',mtg:'個別MTG',weekly:'週次振り返り',person:'MTGの箇条書き'};
 function openTrash(){
   purgeTrash();
   const items=(state.trash||[]).slice().sort((a,b)=>b.deletedAt-a.deletedAt);
@@ -1769,6 +1770,30 @@ function delLG(id){askConfirm('この目標を削除しますか？',()=>{
   const label=(kind==='yearStartGoal'?'年度初めの目標':'長期目標')+(g.text?'（'+String(g.text).slice(0,12)+'）':'');
   softDelete(kind,label,g,()=>{ const i=arr.indexOf(g); if(i>=0)arr.splice(i,1); });
 });}
+/* ====== ○年後の自分（年度初めの目標タブ内。年度ごとに「1年後の自分」等の記入欄） ====== */
+function futureSelfForYear(year){
+  return state.futureSelf.filter(f=>String(f.year)===String(year)).sort((a,b)=>(Number(a.n)||0)-(Number(b.n)||0)||a.createdAt-b.createdAt);
+}
+/* その年度の欄が1つも無ければ「1年後・2年後・3年後」を自動で用意する（初回だけ） */
+function ensureFutureSelf(year){
+  if(futureSelfForYear(year).length)return;
+  [1,2,3].forEach(n=>{ state.futureSelf.push({id:uid(),year:String(year),n:String(n),text:'',createdAt:Date.now()}); });
+  save();
+}
+function addFutureSelf(year){
+  const cur=futureSelfForYear(year);
+  const nextN=cur.length?(Number(cur[cur.length-1].n)||cur.length)+1:1;
+  state.futureSelf.push({id:uid(),year:String(year),n:String(nextN),text:'',createdAt:Date.now()});
+  save();render();
+}
+function setFutureSelfField(id,f,v){
+  const f0=state.futureSelf.find(x=>x.id===id); if(!f0)return;
+  f0[f]=v; save();
+}
+function delFutureSelf(id){askConfirm('この欄を削除しますか？',()=>{
+  const f=state.futureSelf.find(x=>x.id===id); if(!f)return;
+  softDelete('futureSelf','○年後の自分（'+(f.n||'?')+'年後）',f,()=>{ state.futureSelf=state.futureSelf.filter(x=>x.id!==id); });
+});}
 const MG_ROWS=[['r1','❶参画数 ※決めた人'],['r2','❷スキルシート回収数'],['r3','❸紹介数（直紹介）'],['r4','　紹介数（イベント）'],['r5','❹アポ数（初アポ）'],['r6','　アポ数（2回目以降）'],['r7','❺外部イベント参加数']];
 /* 指定日の「翌月1日」を返す（YYYY-MM-DD） */
 function nextMonthFirst(dateStr){
@@ -1869,11 +1894,25 @@ function goalView(){
       lgHtml+
       (yearGoals.length?'<div class="section-label">全体プレビュー</div>'+goalPreviewBox(yearGoals):'');
   }else if(tab==='yearStart'){
+    ensureFutureSelf(curYear);
+    const fsList=futureSelfForYear(curYear);
+    const fsCard=f=>
+      '<div class="card">'+
+      '<button class="card-del" onclick="delFutureSelf(\''+f.id+'\')" aria-label="削除">🗑</button>'+
+      '<div class="field" style="padding-right:44px"><label style="display:flex;align-items:center;gap:6px;font-size:calc(15px * var(--fs,1));font-weight:800;color:var(--indigo-ink)">'+
+        '<input type="number" inputmode="numeric" style="width:64px;text-align:center;font-weight:800;font-size:inherit" value="'+esc(f.n)+'" onchange="setFutureSelfField(\''+f.id+'\',\'n\',this.value)">年後の自分'+
+      '</label></div>'+
+      '<div class="voice-wrap"><textarea id="fs_'+f.id+'" placeholder="目標を入力" oninput="setFutureSelfField(\''+f.id+'\',\'text\',this.value)">'+esc(f.text)+'</textarea>'+micBtn('fs_'+f.id)+'</div>'+
+      '</div>';
     body='<div class="section-label" style="margin-top:2px">年度初めの目標</div>'+
       '<div class="btn-row" style="margin-top:10px"><button class="btn primary block" onclick="addYearStartGoal()">＋ 年度初めの目標を追加</button></div>'+
       '<p class="hint">年度の初めに立てる目標です。長期目標と同じ形で、期限（任意）と内容を記入できます。</p>'+
       ysHtml+
-      (yearYs.length?'<div class="section-label">全体プレビュー</div>'+goalPreviewBox(yearYs):'');
+      (yearYs.length?'<div class="section-label">全体プレビュー</div>'+goalPreviewBox(yearYs):'')+
+      '<div class="section-label">○年後の自分</div>'+
+      '<p class="hint">数字は自由に変えられます（例：1→5年後）。'+curYear+'年度の欄です。</p>'+
+      fsList.map(fsCard).join('')+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn ghost block" onclick="addFutureSelf(\''+curYear+'\')">＋ 欄を追加</button></div>';
   }else{
     body='<div class="section-label" style="margin-top:2px">今月の目標と結果</div>'+
       '<div class="btn-row"><button class="btn primary block" onclick="addMonthlyGoal()">＋ 今月の目標表を追加</button></div>'+
@@ -2287,7 +2326,7 @@ function saveSnaps(arr){
 function snapCounts(d){
   d=d||{};
   const sched=d.schedules?Object.keys(d.schedules).length:0;
-  const goals=(d.longGoals?d.longGoals.length:0)+(d.yearStartGoals?d.yearStartGoals.length:0)+(d.monthlyGoals?d.monthlyGoals.length:0);
+  const goals=(d.longGoals?d.longGoals.length:0)+(d.yearStartGoals?d.yearStartGoals.length:0)+(d.futureSelf?d.futureSelf.length:0)+(d.monthlyGoals?d.monthlyGoals.length:0);
   return {apo:(d.apos?d.apos.length:0), sched:sched, ref:(d.referrals?d.referrals.length:0), goal:goals, mtg:(d.mtgs?d.mtgs.length:0)};
 }
 function snapIsEmpty(c){return !c.apo&&!c.sched&&!c.ref&&!c.goal&&!c.mtg;}
@@ -2666,6 +2705,7 @@ function applySavedToState(saved){
   if(!state.weeklyReviews)state.weeklyReviews=[];
   if(!state.mtgs)state.mtgs=[];
   if(!state.yearStartGoals)state.yearStartGoals=[];
+  if(!state.futureSelf)state.futureSelf=[];
   if(!state.trash)state.trash=[];
   (state.mtgs||[]).forEach(m=>{
     if(m.longGoalText===undefined){m.longGoalText=(lgSummaryLines().join('\n'))+(m.longGoalNote?('\n'+m.longGoalNote):'');}
