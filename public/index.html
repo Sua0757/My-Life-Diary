@@ -1625,6 +1625,10 @@ function refFormView(id){
   const selText=(field,selField,key,label)=>
     '<div class="inline">'+bind(selectHtml('r_'+selField+'_'+id,key,r[selField]),selField).replace('oninput','onchange')+
     '<div class="voice-wrap">'+bind('<input type="text" id="r_'+field+'_'+id+'" value="'+esc(r[field])+'" placeholder="自由入力">',field)+micBtn('r_'+field+'_'+id)+'</div></div>'+optEditBtn(key,label);
+  /* 選択欄の下に自由入力（textarea）を置く版。改行でき、内容が下に伸びて全文表示される */
+  const selArea=(field,selField,key,label)=>
+    '<div>'+bind(selectHtml('r_'+selField+'_'+id,key,r[selField]),selField).replace('oninput','onchange')+optEditBtn(key,label)+'</div>'+
+    '<div class="voice-wrap" style="margin-top:6px">'+bind('<textarea id="r_'+field+'_'+id+'" placeholder="自由入力（改行できます）">'+esc(r[field])+'</textarea>',field)+micBtn('r_'+field+'_'+id)+'</div>';
   return '<button class="back" onclick="subView=null;render()">← 紹介者情報一覧に戻る</button>'+
   '<div class="big-title-preview">'+esc(refTitle(r))+'</div>'+
   '<div class="card">'+
@@ -1644,10 +1648,10 @@ function refFormView(id){
     '<div class="btn-row"><button class="btn subtle small" onclick="setRef(\''+id+'\',\'detail\',summarizeApo(state.apos.find(x=>x.id===\''+r.apoId+'\')||{}));render()">↺ 最新の「着地」を反映</button></div>'+
     F('その他友人情報',vArea('r_friendInfo_'+id,r.friendInfo,'','', 'oninput="setRef(\''+id+'\',\'friendInfo\',this.value)"'))+
     F('要望',vArea('r_request_'+id,r.request||'','','', 'oninput="setRef(\''+id+'\',\'request\',this.value)"'))+
-    F('紹介の着地',selText('refLanding','refLandingSel','refLanding','紹介の着地'))+
+    F('紹介の着地',selArea('refLanding','refLandingSel','refLanding','紹介の着地'))+
     '<div class="section-label red">紹介結果（イベント後・紹介後）</div>'+
-    F('着地',vText('r_resultLanding_'+id,r.resultLanding,'','oninput="setRef(\''+id+'\',\'resultLanding\',this.value)"'))+
-    F('次のアクション',selText('nextAction','nextActionSel','nextAction','次のアクション'))+
+    F('着地',vArea('r_resultLanding_'+id,r.resultLanding,'','', 'oninput="setRef(\''+id+'\',\'resultLanding\',this.value)"'))+
+    F('次のアクション',selArea('nextAction','nextActionSel','nextAction','次のアクション'))+
     F('話した内容の概要',vArea('r_resultSummary_'+id,r.resultSummary,'','', 'oninput="setRef(\''+id+'\',\'resultSummary\',this.value)"'))+
   '</div>'+
   '<div class="btn-row"><button class="btn primary block" onclick="copyRefShare(\''+id+'\')">📋 共有用テキストをコピー（コンサル仲間へ）</button></div>'+
