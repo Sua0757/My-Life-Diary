@@ -4,7 +4,7 @@
    - HTML（アプリ本体）は「ネット優先・失敗したらキャッシュ」= オンライン時は常に最新、オフライン時は前回の内容で起動。
    - Supabase SDK（外部スクリプト）は「キャッシュ優先」= オフラインでも読み込める。
    - Supabaseへのデータ通信(POST等)やGET以外は素通り（キャッシュしない）。 */
-const CACHE = 'mylife-cache-v29';
+const CACHE = 'mylife-cache-v30';
 const SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 
 self.addEventListener('install', (e) => {

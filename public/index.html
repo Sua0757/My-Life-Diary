@@ -1628,7 +1628,7 @@ function refFormView(id){
   /* 選択欄の下に自由入力（textarea）を置く版。改行でき、内容が下に伸びて全文表示される */
   const selArea=(field,selField,key,label)=>
     '<div>'+bind(selectHtml('r_'+selField+'_'+id,key,r[selField]),selField).replace('oninput','onchange')+optEditBtn(key,label)+'</div>'+
-    '<div class="voice-wrap" style="margin-top:6px">'+bind('<textarea id="r_'+field+'_'+id+'" placeholder="自由入力（改行できます）">'+esc(r[field])+'</textarea>',field)+micBtn('r_'+field+'_'+id)+'</div>';
+    '<div class="voice-wrap" style="margin-top:6px">'+bind('<textarea id="r_'+field+'_'+id+'" placeholder="">'+esc(r[field])+'</textarea>',field)+micBtn('r_'+field+'_'+id)+'</div>';
   return '<button class="back" onclick="subView=null;render()">← 紹介者情報一覧に戻る</button>'+
   '<div class="big-title-preview">'+esc(refTitle(r))+'</div>'+
   '<div class="card">'+
