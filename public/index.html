@@ -704,24 +704,30 @@ async function openSyncDiag(){
 async function testCloudWrite(){
   const box=document.getElementById('diagBox');
   if(!currentUser){toast('ログインが必要です');return;}
-  const testId='__synctest_'+Date.now();
   let out=['■ 保存テスト結果',''];
-  try{
-    const {error}=await sb.from('apos').upsert({id:testId,user_id:currentUser.id,data:{test:true}},{onConflict:'id'});
-    if(error){
-      out.push('❌ apos への保存：失敗');
-      out.push('　code: '+(error.code||'—'));
-      out.push('　message: '+(error.message||'—'));
-      out.push('　details: '+(error.details||'—'));
-      out.push('　hint: '+(error.hint||'—'));
-    }else{
-      out.push('✅ apos への保存：成功');
-      try{ await sb.from('apos').delete().eq('id',testId).eq('user_id',currentUser.id); out.push('（テスト用データは削除しました）'); }catch(e){}
+  async function testTbl(tbl,label){
+    const testId='__synctest_'+Date.now()+'_'+tbl;
+    try{
+      const {error}=await sb.from(tbl).upsert({id:testId,user_id:currentUser.id,data:{test:true}},{onConflict:'id'});
+      if(error){
+        out.push('❌ '+label+'（'+tbl+'）への保存：失敗');
+        out.push('　code: '+(error.code||'—'));
+        out.push('　message: '+(error.message||'—'));
+        out.push('　hint: '+(error.hint||'—'));
+      }else{
+        out.push('✅ '+label+'（'+tbl+'）への保存：成功');
+        try{ await sb.from(tbl).delete().eq('id',testId).eq('user_id',currentUser.id); }catch(e){}
+      }
+    }catch(e){
+      out.push('❌ '+label+'（'+tbl+'）への保存：通信エラー');
+      out.push('　'+(e&&e.message?e.message:String(e)));
     }
-  }catch(e){
-    out.push('❌ apos への保存：通信エラー');
-    out.push('　'+(e&&e.message?e.message:String(e)));
+    out.push('');
   }
+  if(box)box.textContent='テスト中…';
+  await testTbl('apos','アポ');
+  await testTbl('referrals','紹介');
+  out.push('（テスト用データは削除しました）');
   if(box)box.textContent=out.join('\n');
 }
 /* 前面に戻った時・通信復帰時・一定間隔で自動取り込み */
