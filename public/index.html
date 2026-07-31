@@ -834,6 +834,11 @@ async function forcePushToCloud(){
   if(!currentUser){toast('ログインが必要です');return;}
   if(!navigator.onLine){toast('電波の良い場所でお試しください');return;}
   closeModal();
+  /* 「この端末を優先」＝紹介者情報を最新扱いにして、他端末の取り込みで必ず反映されるようにする
+     （紹介一覧は作成日順なので、updatedAtを更新しても並び順は変わらない） */
+  const now=Date.now();
+  (state.referrals||[]).forEach(r=>{ if(r)r.updatedAt=now; });
+  save();
   setSyncStatus('wait','アップロード中…');
   try{ await pushAllLocalToCloud(); await flushQueue(); setSyncStatus('ok','同期済み'); toast('この端末の内容をクラウドへアップロードしました'); }
   catch(e){ setSyncStatus('wait','一部未同期'); toast('アップロードに失敗しました。電波の良い場所で再度お試しください'); }
@@ -1540,7 +1545,7 @@ function createRefFromApo(apoId){
     return;
   }
   const r={
-    id:uid(), createdAt:Date.now(), apoId:apoId,
+    id:uid(), createdAt:Date.now(), updatedAt:Date.now(), apoId:apoId,
     refDate:today(), place:'', originSel:'', jobExtra:'',
     detail:summarizeApo(a), friendInfo:'', request:'', refLandingSel:'', refLanding:'',
     resultLanding:'', nextActionSel:'', nextAction:'', resultSummary:''
@@ -1563,7 +1568,7 @@ function addRefPick(){
     }).join('')+
     '<div class="btn-row" style="margin-top:12px"><button class="btn subtle block" onclick="closeModal()">キャンセル</button></div>');
 }
-function setRef(id,field,value){const r=state.referrals.find(x=>x.id===id);if(!r)return;r[field]=value;save();const _p=document.getElementById('refprev_'+id);if(_p)_p.textContent=refShareText(id);clearTimeout(_refSyncTimers[id]);_refSyncTimers[id]=setTimeout(()=>syncReferralRow(id),400);}
+function setRef(id,field,value){const r=state.referrals.find(x=>x.id===id);if(!r)return;r[field]=value;r.updatedAt=Date.now();save();const _p=document.getElementById('refprev_'+id);if(_p)_p.textContent=refShareText(id);clearTimeout(_refSyncTimers[id]);_refSyncTimers[id]=setTimeout(()=>syncReferralRow(id),400);}
 function deleteRef(id){askConfirm('この紹介者情報を削除しますか？',()=>{
   const r=state.referrals.find(x=>x.id===id); if(!r)return;
   softDelete('referral','紹介者情報',r,()=>{ state.referrals=state.referrals.filter(x=>x.id!==id); deleteReferralRow(id); subView=null; });
@@ -2728,6 +2733,8 @@ function applySavedToState(saved){
   if(!state.yearStartGoals)state.yearStartGoals=[];
   if(!state.futureSelf)state.futureSelf=[];
   if(!state.trash)state.trash=[];
+  /* 紹介者情報にupdatedAtが無いと、端末間マージで新しい方を判定できず反映されない。作成時刻で補う */
+  (state.referrals||[]).forEach(r=>{ if(r&&r.updatedAt===undefined)r.updatedAt=r.createdAt||0; });
   (state.mtgs||[]).forEach(m=>{
     if(m.longGoalText===undefined){m.longGoalText=(lgSummaryLines().join('\n'))+(m.longGoalNote?('\n'+m.longGoalNote):'');}
     (m.abdList||[]).forEach(p=>{if(!p.grp)p.grp='A';});
