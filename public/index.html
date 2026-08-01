@@ -1580,7 +1580,7 @@ function refTitle(r){
   return (a.name||'（名前未入力）')+'、'+(age!==''?age+'歳':'年齢未入力')+'、'+(income||'年収未入力');
 }
 function refListView(){
-  const refs=state.referrals.slice().sort((a,b)=>a.createdAt-b.createdAt);
+  const refs=state.referrals.slice().sort((a,b)=>(b.refDate||'').localeCompare(a.refDate||'')||(b.createdAt||0)-(a.createdAt||0)); /* 紹介日が新しいものが上 */
   return '<h2 class="page">紹介者情報 <small>全'+refs.length+'件</small></h2>'+
     '<div class="btn-row"><button class="btn primary block" onclick="addRefPick()">＋ アポ管理のリストから選んで作成</button></div>'+
     (refs.length?refs.map(r=>{
