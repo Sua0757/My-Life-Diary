@@ -1531,6 +1531,16 @@ function summarizeApo(a){
   /* 同じ人で複数回のアポがある場合は、回ごとに見出しを付けて全文をそのまま並べる */
   return withLand.map(r=>'（'+(r.count||'?')+'回目）\n'+(r.landing||'').trim()).join('\n\n');
 }
+/* 1回目のアポの「アポのメモ」を取り出す（その他友人情報に反映するため） */
+function firstApoMemo(a){
+  if(!a)return '';
+  const name=(a.name||'').trim();
+  const list=name?state.apos.filter(x=>(x.name||'').trim()===name):[a];
+  const first=list.find(x=>(Number(x.count)||1)===1)
+    || list.slice().sort((x,y)=>(((x.apoDate||'')+'_'+x.createdAt)).localeCompare(((y.apoDate||'')+'_'+y.createdAt)))[0]
+    || a;
+  return (first.memo||'').trim();
+}
 function createRefFromApo(apoId){
   const a=state.apos.find(x=>x.id===apoId); if(!a)return;
   /* 同じ人の紹介者情報が既にあれば、それを開いて上書き編集 */
@@ -1547,7 +1557,7 @@ function createRefFromApo(apoId){
   const r={
     id:uid(), createdAt:Date.now(), updatedAt:Date.now(), apoId:apoId,
     refDate:today(), place:'', originSel:'', jobExtra:'',
-    detail:summarizeApo(a), friendInfo:'', request:'', refLandingSel:'', refLanding:'',
+    detail:summarizeApo(a), friendInfo:firstApoMemo(a), request:'', refLandingSel:'', refLanding:'',
     resultLanding:'', nextActionSel:'', nextAction:'', resultSummary:''
   };
   state.referrals.push(r); save(); syncReferralRow(r.id);
@@ -1596,28 +1606,32 @@ function refShareText(id){
   const r=state.referrals.find(x=>x.id===id); if(!r)return '';
   const a=state.apos.find(x=>x.id===r.apoId)||{};
   const L=[];
+  /* 1行項目：ラベルと内容を同じ行に */
+  const single=(label,val)=>{ if(val!=null&&String(val).trim())L.push('・'+label+'：'+String(val).trim()); };
+  /* 複数行項目：ラベルの下に内容を配置し、改行・空白行はそのまま保持する */
+  const block=(label,val)=>{ val=(val==null?'':String(val)).replace(/\s+$/,''); if(val.trim())L.push('・'+label+'：\n'+val); };
   L.push('■ '+(a.name||'（名前未入力)')+'さん');
   L.push('【紹介情報】');
   L.push('・紹介日：'+(r.refDate?fmtDate(r.refDate):'未定'));
-  if(r.place)L.push('・紹介場所：'+r.place);
-  if(r.originSel)L.push('・知り合った経緯：'+r.originSel);
+  single('紹介場所',r.place);
+  single('知り合った経緯',r.originSel);
   if(a.age!=='')L.push('・年齢：'+grownNumber(a.age,a.ageYear)+'歳');
   if(joinVal(a.incomeSel,a.income))L.push('・年収：'+joinVal(a.incomeSel,a.income));
   if(joinVal(a.jobSel,a.job)||r.jobExtra)L.push('・仕事：'+[joinVal(a.jobSel,a.job),r.jobExtra].filter(Boolean).join(' / '));
   if(joinVal(a.devSel,a.dev))L.push('・開発・構築の有無：'+joinVal(a.devSel,a.dev));
   if(a.exp!=='')L.push('・経験年数：約'+grownNumber(a.exp,a.expYear)+'年');
-  if(r.detail)L.push('・詳細：'+r.detail);
-  if(r.friendInfo)L.push('・その他友人情報：'+r.friendInfo);
-  if(r.request)L.push('・要望：'+r.request);
-  if(joinVal(r.refLandingSel,r.refLanding))L.push('・紹介の着地：'+joinVal(r.refLandingSel,r.refLanding));
+  block('詳細',r.detail);
+  block('その他友人情報',r.friendInfo);
+  block('要望',r.request);
+  single('紹介の着地',joinVal(r.refLandingSel,r.refLanding));
   if(r.resultLanding||r.nextAction||r.nextActionSel||r.resultSummary){
     L.push('【紹介結果】');
-    if(r.resultLanding)L.push('・着地：'+r.resultLanding);
-    if(joinVal(r.nextActionSel,r.nextAction))L.push('・次のアクション：'+joinVal(r.nextActionSel,r.nextAction));
-    if(r.resultSummary)L.push('・話した内容の概要：'+r.resultSummary);
+    block('着地',r.resultLanding);
+    single('次のアクション',joinVal(r.nextActionSel,r.nextAction));
+    block('話した内容の概要',r.resultSummary);
   }
-  /* 各欄の文末改行などで空白行が入らないよう、連続する改行を1つにまとめる */
-  return L.map(s=>String(s).replace(/\s+$/,'')).join('\n').replace(/\n{2,}/g,'\n').trim();
+  /* 行末の余分な空白だけ整え、意図した改行・空白行はそのまま残す */
+  return L.join('\n').replace(/[ \t]+$/gm,'').replace(/\n{4,}/g,'\n\n\n').trim();
 }
 function copyRefShare(id){
   const t=refShareText(id);
@@ -1657,7 +1671,8 @@ function refFormView(id){
     F('経験年数',ro(a.exp!==''?'約'+grownNumber(a.exp,a.expYear)+'年':''),'アポ記録から自動')+
     F('詳細',vArea('r_detail_'+id,r.detail,'','', 'oninput="setRef(\''+id+'\',\'detail\',this.value)"'),'アポ記録の「着地」の内容をそのまま反映。文言の手直しもできます')+
     '<div class="btn-row"><button class="btn subtle small" onclick="setRef(\''+id+'\',\'detail\',summarizeApo(state.apos.find(x=>x.id===\''+r.apoId+'\')||{}));render()">↺ 最新の「着地」を反映</button></div>'+
-    F('その他友人情報',vArea('r_friendInfo_'+id,r.friendInfo,'','', 'oninput="setRef(\''+id+'\',\'friendInfo\',this.value)"'))+
+    F('その他友人情報',vArea('r_friendInfo_'+id,r.friendInfo,'','', 'oninput="setRef(\''+id+'\',\'friendInfo\',this.value)"'),'1回目のアポの「アポのメモ」を反映。文言の手直し・削除もできます')+
+    '<div class="btn-row"><button class="btn subtle small" onclick="setRef(\''+id+'\',\'friendInfo\',firstApoMemo(state.apos.find(x=>x.id===\''+r.apoId+'\')||{}));render()">↺ 1回目のアポのメモを反映</button></div>'+
     F('要望',vArea('r_request_'+id,r.request||'','','', 'oninput="setRef(\''+id+'\',\'request\',this.value)"'))+
     F('紹介の着地',selArea('refLanding','refLandingSel','refLanding','紹介の着地'))+
     '<div class="section-label red">紹介結果（イベント後・紹介後）</div>'+
