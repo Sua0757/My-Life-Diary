@@ -880,7 +880,7 @@ function defaultState(){
       metrics:['紹介数（イベント動員数含む）','金塚さんに繋げる提案数','親友アポ数','LINE交換数','①SE外アポ数','②SEアポ数','アポ数合計（①②）']
     },
     longGoals:[], yearStartGoals:[], futureSelf:[], monthlyGoals:[], weeklyReviews:[], mtgs:[], trash:[],
-    carry:{longGoal:'', monthGoal:'', startW:'', endW:'', metricGoals:{}},
+    carry:{longGoal:'', monthGoal:'', startW:'', endW:'', metricGoals:{}, metrics:{}},
     ui:{apoView:'month', mngView:'order', fontSize:'small'}
   };
 }
@@ -1955,7 +1955,7 @@ function ensureSheet(date){
     const c=state.carry||{longGoal:'',monthGoal:'',startW:'',endW:'',metricGoals:{}};
     state.schedules[date]={
       longGoal:c.longGoal||'',monthGoal:c.monthGoal||'',todayGoal:'',sleep:'',wake:'',startW:c.startW||'',endW:c.endW||'',
-      slots:{},slotsRed:{},slotABC:{},slotStrike:{},todo1:{},todo2:{},metrics:{},metricGoals:Object.assign({},c.metricGoals||{}),
+      slots:{},slotsRed:{},slotABC:{},slotStrike:{},todo1:{},todo2:{},metrics:Object.assign({},c.metrics||{}),metricGoals:Object.assign({},c.metricGoals||{}),
       evCount:'',evCost:'',evLine:'',
       mood:0,ach10:0,apoList:'',score:'',scoreWhy:'',diary:''
     };
@@ -1977,7 +1977,7 @@ function cospa(s){const c=parseFloat(s.evCost),l=parseFloat(s.evLine);if(!isFini
 function updCospa(date){const el=document.getElementById('evCospa');if(el)el.textContent=cospa(state.schedules[date]||{});}
 function setSheetChk(date,group,i,v){const s=ensureSheet(date);s[group][i]=v;save();
   const el=document.getElementById('td_'+group+'_'+i); if(el)el.classList.toggle('done',v);}
-function setSheetMetric(date,i,v){const s=ensureSheet(date);if(!s.metrics)s.metrics={};s.metrics[i]=v;save();}
+function setSheetMetric(date,i,v){const s=ensureSheet(date);if(!s.metrics)s.metrics={};s.metrics[i]=v;if(!state.carry)state.carry={};if(!state.carry.metrics)state.carry.metrics={};state.carry.metrics[i]=v;save();}
 function setSheetMetricGoal(date,i,v){const s=ensureSheet(date);if(!s.metricGoals)s.metricGoals={};s.metricGoals[i]=v;if(!state.carry)state.carry={};if(!state.carry.metricGoals)state.carry.metricGoals={};state.carry.metricGoals[i]=v;save();}
 function setSheetABC(date,t,v){const s=ensureSheet(date);if(!s.slotABC)s.slotABC={};s.slotABC[t]=v;save();}
 /* スケジュールのABCをワンタップで選択（同じものを再度押すと解除） */
@@ -2750,6 +2750,7 @@ function applySavedToState(saved){
     if(state.carry.startW===undefined)state.carry.startW=last?(last.startW||''):'';
     if(state.carry.endW===undefined)state.carry.endW=last?(last.endW||''):'';
     if(!state.carry.metricGoals)state.carry.metricGoals=last?Object.assign({},last.metricGoals||{}):{};
+    if(!state.carry.metrics)state.carry.metrics=last?Object.assign({},last.metrics||{}):{};
   }
 }
 
