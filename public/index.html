@@ -1970,13 +1970,32 @@ function ensureSheet(date){
     const c=state.carry||{longGoal:'',monthGoal:'',startW:'',endW:'',metricGoals:{}};
     state.schedules[date]={
       longGoal:c.longGoal||'',monthGoal:c.monthGoal||'',todayGoal:'',sleep:'',wake:'',startW:c.startW||'',endW:c.endW||'',
-      slots:{},slotsRed:{},slotABC:{},slotStrike:{},todo1:{},todo2:{},metrics:Object.assign({},c.metrics||{}),metricGoals:Object.assign({},c.metricGoals||{}),
+      slots:{},slotsRed:{},slotABC:{},slotStrike:{},todo1:{},todo2:{},metrics:{},metricCarried:false,metricGoals:Object.assign({},c.metricGoals||{}),
       evCount:'',evCost:'',evLine:'',
       mood:0,ach10:0,apoList:'',score:'',scoreWhy:'',diary:''
     };
+    applyCarriedMetrics(date); /* その日の昼12時を過ぎていれば、前日までの結果を引き継ぐ */
     save();
   }
   return state.schedules[date];
+}
+/* その日の12:00を過ぎたか（端末の時計基準） */
+function noonPassed(date){ if(!date)return false; return Date.now()>=new Date(date+'T12:00:00').getTime(); }
+/* 今月の数字の「結果」を、その日の昼12時を過ぎたら前日までの数字で埋める。
+   ・結果欄が全部空のときだけ入れる（入力済みは触らない）
+   ・一度入れたら metricCarried=true にして再適用しない（＝以後は自由に編集・削除できる） */
+function applyCarriedMetrics(date){
+  const s=state.schedules[date]; if(!s)return;
+  if(s.metricCarried)return;
+  if(date!==today())return;      /* 「その日（今日）の分のみ」＝過去・未来のシートは自動で入れない */
+  if(!noonPassed(date))return;   /* 昼12時を過ぎてから */
+  const m=s.metrics||{};
+  const hasAny=Object.keys(m).some(k=>String(m[k]==null?'':m[k]).trim()!=='');
+  if(hasAny){ s.metricCarried=true; save(); return; } /* 既に入力あり＝引き継がず、以後も再適用しない */
+  const c=(state.carry&&state.carry.metrics)||{};
+  if(Object.keys(c).length)s.metrics=Object.assign({},c);
+  s.metricCarried=true;
+  save();
 }
 function setSheet(date,f,v){const s=ensureSheet(date);s[f]=v;if(f==='longGoal'||f==='monthGoal'||f==='startW'||f==='endW'){if(!state.carry)state.carry={longGoal:'',monthGoal:'',startW:'',endW:'',metricGoals:{}};state.carry[f]=v;}save();}
 function setSheetTime(date,field,hh,mm){
@@ -2074,6 +2093,7 @@ function scaleBtns(date,field,max,val){
 }
 function sheetView(date){
   const s=ensureSheet(date);
+  applyCarriedMetrics(date); /* 昼12時を過ぎたタイミングで開いたら結果を引き継ぐ */
   const tpl=state.scheduleTemplate;
   const abc=s.slotABC||{};
   const mgoals=s.metricGoals||{};
