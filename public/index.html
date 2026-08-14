@@ -1610,6 +1610,8 @@ function refShareText(id){
   const single=(label,val)=>{ if(val!=null&&String(val).trim())L.push('・'+label+'：'+String(val).trim()); };
   /* 複数行項目：ラベルの下に内容を配置し、改行・空白行はそのまま保持する */
   const block=(label,val)=>{ val=(val==null?'':String(val)).replace(/\s+$/,''); if(val.trim())L.push('・'+label+'：\n'+val); };
+  /* 前後を1行空けて見やすくする項目（その他友人情報・要望）。内容がある時だけ空行を入れる */
+  const spacedBlock=(label,val)=>{ val=(val==null?'':String(val)).replace(/\s+$/,''); if(!val.trim())return; if(L.length&&L[L.length-1]!=='')L.push(''); L.push('・'+label+'：\n'+val); L.push(''); };
   L.push('■ '+(a.name||'（名前未入力)')+'さん');
   L.push('【紹介情報】');
   L.push('・紹介日：'+(r.refDate?fmtDate(r.refDate):'未定'));
@@ -1621,8 +1623,8 @@ function refShareText(id){
   if(joinVal(a.devSel,a.dev))L.push('・開発・構築の有無：'+joinVal(a.devSel,a.dev));
   if(a.exp!=='')L.push('・経験年数：約'+grownNumber(a.exp,a.expYear)+'年');
   block('詳細',r.detail);
-  block('その他友人情報',r.friendInfo);
-  block('要望',r.request);
+  spacedBlock('その他友人情報',r.friendInfo);
+  spacedBlock('要望',r.request);
   single('紹介の着地',joinVal(r.refLandingSel,r.refLanding));
   if(r.resultLanding||r.nextAction||r.nextActionSel||r.resultSummary){
     L.push('【紹介結果】');
