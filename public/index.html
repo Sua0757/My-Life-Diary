@@ -1426,7 +1426,7 @@ function apoListView(){
   const alerts=computeAlerts();
   const apos=state.apos.slice();
   const mode=state.ui.apoView||'month';
-  const byDateDesc=(a,b)=>(b.createdAt||0)-(a.createdAt||0)||(b.apoDate||'').localeCompare(a.apoDate||''); /* 新規に追加した人が上 */
+  const byDateDesc=(a,b)=>(b.apoDate||'').localeCompare(a.apoDate||'')||(b.createdAt-a.createdAt); /* 新しい日付が上 */
   let body='';
   if(!apos.length){
     body='<div class="empty">まだアポ記録がありません。<br>「＋ 新しいアポ記録」から作成しましょう。</div>';
