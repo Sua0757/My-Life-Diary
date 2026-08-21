@@ -1555,7 +1555,7 @@ function createRefFromApo(apoId){
     return;
   }
   const r={
-    id:uid(), createdAt:Date.now(), updatedAt:Date.now(), apoId:apoId,
+    id:uid(), createdAt:Date.now(), updatedAt:Date.now(), apoId:apoId, count:'1',
     refDate:today(), place:'', originSel:'', jobExtra:'',
     detail:summarizeApo(a), friendInfo:firstApoMemo(a), request:'', refLandingSel:'', refLanding:'',
     resultLanding:'', nextActionSel:'', nextAction:'', resultSummary:''
@@ -1563,6 +1563,25 @@ function createRefFromApo(apoId){
   state.referrals.push(r); save(); syncReferralRow(r.id);
   subView={type:'refForm',id:r.id}; currentTab='ref'; syncTabbar(); render(); window.scrollTo(0,0);
   toast('アポ記録から紹介者情報を作成しました');
+}
+/* 紹介者情報を複製（2回目以降）。同じ人（apoId）で紹介回数を+1し、紹介日は今日にリセット。
+   引き継ぐ：知り合った経緯・仕事の追記・詳細・その他友人情報
+   （年齢・年収・仕事・開発構築・経験年数は同じapoId＝アポ記録から自動で反映される）
+   新しく記入：紹介日・場所・要望・紹介の着地・紹介結果 */
+function duplicateRef(id){
+  const base=state.referrals.find(x=>x.id===id); if(!base)return;
+  const r={
+    id:uid(), createdAt:Date.now(), updatedAt:Date.now(), apoId:base.apoId,
+    count:String((Number(base.count)||1)+1),
+    refDate:today(), place:'',
+    originSel:base.originSel||'', jobExtra:base.jobExtra||'',
+    detail:base.detail||'', friendInfo:base.friendInfo||'', request:'',
+    refLandingSel:'', refLanding:'',
+    resultLanding:'', nextActionSel:'', nextAction:'', resultSummary:''
+  };
+  state.referrals.push(r); save(); syncReferralRow(r.id);
+  toast('2回目以降の紹介者情報を作成しました');
+  subView={type:'refForm',id:r.id}; currentTab='ref'; syncTabbar(); render(); window.scrollTo(0,0);
 }
 function addRefPick(){
   const apos=state.apos.slice().sort((a,b)=>b.updatedAt-a.updatedAt); /* アポ管理と同じ更新順（新しいものが上） */
@@ -1587,7 +1606,7 @@ function refTitle(r){
   const a=state.apos.find(x=>x.id===r.apoId)||{};
   const age=grownNumber(a.age,a.ageYear);
   const income=joinVal(a.incomeSel,a.income);
-  return (a.name||'（名前未入力）')+'、'+(age!==''?age+'歳':'年齢未入力')+'、'+(income||'年収未入力');
+  return circled(r.count)+(a.name||'（名前未入力）')+'、'+(age!==''?age+'歳':'年齢未入力')+'、'+(income||'年収未入力'); /* 2回目以降は名前の横に②③… */
 }
 function refListView(){
   const refs=state.referrals.slice().sort((a,b)=>(b.refDate||'').localeCompare(a.refDate||'')||(b.createdAt||0)-(a.createdAt||0)); /* 紹介日が新しいものが上 */
@@ -1612,7 +1631,7 @@ function refShareText(id){
   const block=(label,val)=>{ val=(val==null?'':String(val)).replace(/\s+$/,''); if(val.trim())L.push('・'+label+'：\n'+val); };
   /* 前後を1行空けて見やすくする項目（その他友人情報・要望）。内容がある時だけ空行を入れる */
   const spacedBlock=(label,val)=>{ val=(val==null?'':String(val)).replace(/\s+$/,''); if(!val.trim())return; if(L.length&&L[L.length-1]!=='')L.push(''); L.push('・'+label+'：\n'+val); L.push(''); };
-  L.push('■ '+(a.name||'（名前未入力)')+'さん');
+  L.push('■ '+circled(r.count)+(a.name||'（名前未入力)')+'さん'); /* 2回目以降は②③…を付ける */
   L.push('【紹介情報】');
   L.push('・紹介日：'+(r.refDate?fmtDate(r.refDate):'未定'));
   single('紹介場所',r.place);
@@ -1684,6 +1703,8 @@ function refFormView(id){
   '</div>'+
   '<div class="btn-row"><button class="btn primary block" onclick="copyRefShare(\''+id+'\')">📋 共有用テキストをコピー（コンサル仲間へ）</button></div>'+
   '<div class="summary-box" id="refprev_'+id+'" style="margin-bottom:12px">'+esc(refShareText(id))+'</div>'+
+  '<div class="btn-row"><button class="btn primary block" onclick="duplicateRef(\''+id+'\')">📄 紹介者情報を複製（2回目以降）</button></div>'+
+  '<p class="hint" style="margin-bottom:12px">※ 複製すると同じ方の紹介回数が+1され、名前の横に ②③… が付きます。知り合った経緯・年齢・年収・仕事・開発構築・経験年数・詳細・その他友人情報は引き継がれ、紹介日・場所・要望・着地・結果は新しく記入できます。</p>'+
   '<div class="btn-row"><button class="btn danger block" onclick="deleteRef(\''+id+'\')">削除</button></div>';
 }
 /* ============================================================
