@@ -2067,7 +2067,7 @@ function slotTapToggle(date,t,ev){
   }
 }
 function setSheetCustom(date,i,v){const s=ensureSheet(date);const label=(state.scheduleTemplate.customFields||[])[i];if(label==null)return;if(!s.custom)s.custom={};s.custom[label]=v;save();}
-function setSheetScale(date,f,v){const s=ensureSheet(date);s[f]=v;save();render();}
+function setSheetScale(date,f,v){const s=ensureSheet(date);s[f]=(Number(s[f])===v?0:v);save();render();} /* 同じ数字を再タップで解除（未選択=0に戻す） */
 function deleteSheet(date){askConfirm(fmtDate(date)+' のシートを削除しますか？',()=>{
   const item=state.schedules[date];
   softDelete('sheet',fmtDate(date)+' のシート',{date:date,sheet:item},()=>{ delete state.schedules[date]; subView=null; });
