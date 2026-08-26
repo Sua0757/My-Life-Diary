@@ -2004,9 +2004,20 @@ function ensureSheet(date){
 }
 /* その日の12:00を過ぎたか（端末の時計基準） */
 function noonPassed(date){ if(!date)return false; return Date.now()>=new Date(date+'T12:00:00').getTime(); }
-/* 今月の数字の「結果」を、その日の昼12時を過ぎたら前日までの数字で埋める。
+/* 指定日より前で「結果」が入っている最新のシートの結果を返す（＝前の日の結果）。
+   state.carry に頼らず実際のシートから取るので、日付をまたいでも確実に前日分を引き継げる */
+function prevSheetMetrics(date){
+  const ds=Object.keys(state.schedules).filter(d=>d<date).sort(); /* 昇順・自分より前の日付だけ */
+  for(let i=ds.length-1;i>=0;i--){
+    const m=state.schedules[ds[i]].metrics||{};
+    if(Object.keys(m).some(k=>String(m[k]==null?'':m[k]).trim()!==''))return m;
+  }
+  return null;
+}
+/* 今月の数字の「結果」を、その日の昼12時を過ぎたら前日の結果で埋める。
    ・結果欄が全部空のときだけ入れる（入力済みは触らない）
-   ・一度入れたら metricCarried=true にして再適用しない（＝以後は自由に編集・削除できる） */
+   ・一度入れたら metricCarried=true にして再適用しない（＝以後は自由に編集・削除できる）
+   ・引き継ぎ元は「前の日のシートの結果」を直接参照（日付をまたいでも反映される） */
 function applyCarriedMetrics(date){
   const s=state.schedules[date]; if(!s)return;
   if(s.metricCarried)return;
@@ -2015,7 +2026,7 @@ function applyCarriedMetrics(date){
   const m=s.metrics||{};
   const hasAny=Object.keys(m).some(k=>String(m[k]==null?'':m[k]).trim()!=='');
   if(hasAny){ s.metricCarried=true; save(); return; } /* 既に入力あり＝引き継がず、以後も再適用しない */
-  const c=(state.carry&&state.carry.metrics)||{};
+  const c=prevSheetMetrics(date)||(state.carry&&state.carry.metrics)||{}; /* 前の日の結果を優先、無ければcarry */
   if(Object.keys(c).length)s.metrics=Object.assign({},c);
   s.metricCarried=true;
   save();
