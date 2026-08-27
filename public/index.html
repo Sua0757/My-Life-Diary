@@ -862,7 +862,7 @@ function defaultState(){
       dev:['開発あり','構築あり','開発・構築なし','テスト・運用保守のみ'],
       purpose:['現在のキャリアと今後のキャリアについて聞く','オンライン飲み会の話をする','オンライン飲み会の案内を出す','お金の話をする','お金の勉強会に誘う','スキルシートの話をする','進捗状況確認','ストレート紹介','情報共有をお願いする','コンサルの練習相手になってもらう','転職活動の状況を聞く','不動産に繋げる'],
       strategy:['オンライン飲み会の話をする','オンライン飲み会の案内を出す','お金の話をする','お金の勉強会に誘う','進捗状況確認','スキルシートの話をする','ストレート紹介','情報共有をお願いする','コンサルの練習相手になってもらう','転職活動の状況を聞く','スキルシートを回収する','終了'],
-      self:['自分のキャリアの話','家族の話','バイトの話','結婚や子どもの話','金塚さんと出会った経緯'],
+      self:['自分のキャリアの話','家族の話','バイトの話','結婚や子どもの話','キーパーソンと出会った経緯'],
       origin:['イベント','友人の紹介','SNS','元同僚','アプリ'],
       refLanding:['スキルシート回収予定','終了','時期を空けて進捗確認'],
       nextAction:['次回アポ設定','スキルシート回収','イベント再誘致','期間を空けて進捗確認','終了'],
@@ -870,14 +870,14 @@ function defaultState(){
     },
     apos:[], referrals:[], schedules:{},
     scheduleTemplate:{
-      longGoal:'2026年7月31日時点の目標『テックビズのコンサルタントになる』',
+      longGoal:'長期目標をここに入力してください',
       timeSlots:['5:30','6:00','6:30','7:00','7:30','8:00','8:30','9:00','9:30','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00','22:30','23:00','23:30'],
       todo1Title:'毎日ToDo', todo2Title:'毎日ToDo SNS作業',
       apoListTitle:'今日のアポした人リスト（箇条書き）', metricsTitle:'今日終了時点の今月の数字（目標）',
       customFields:[],
       todo1:['アポの現場 活動報告→10min','電話報連相→3min','昨日アポした人に御礼','明日と3日後に会う人に連絡','LINE全返信','お誘いのLINEを送る（アポ・代理店イベント・主催イベント）','帳簿更新＆領収書整理','次週アポ数確認（毎週木曜日）','1week振り返り（毎週木曜日）','土日アポ戦略立て（毎週金曜日）','帳簿管理、予算組見直し（20日前後）','作業報告書提出（月末）','今月振り返り次月目標（月末）'],
       todo2:['❶X投稿50件'],
-      metrics:['紹介数（イベント動員数含む）','金塚さんに繋げる提案数','親友アポ数','LINE交換数','①SE外アポ数','②SEアポ数','アポ数合計（①②）']
+      metrics:['紹介数（イベント動員数含む）','キーパーソンに繋げる提案数','親友アポ数','LINE交換数','①SE外アポ数','②SEアポ数','アポ数合計（①②）']
     },
     longGoals:[], yearStartGoals:[], futureSelf:[], monthlyGoals:[], weeklyReviews:[], mtgs:[], trash:[],
     carry:{longGoal:'', monthGoal:'', startW:'', endW:'', metricGoals:{}, metrics:{}},
@@ -2505,7 +2505,7 @@ const WK_NOTE='※目標設定がただの数字の割り算にならないよ�
 function wkEmptyGoal(){return {apo:'',teian:'',shokai:''};}
 function wkEmptyAction(){return {event:'',contact:'',apoSE:'',kanezuka:'',kanezukaNames:''};}
 function fmtGoalObj(o){o=o||{};return 'アポ数：'+(o.apo||'　')+'、提案数：'+(o.teian||'　')+'、紹介数：'+(o.shokai||'　');}
-function fmtActionObj(o){o=o||{};return '・イベント参加数：'+(o.event||'　')+'件\n・連絡先交換数（SE以外も含む）：'+(o.contact||'　')+'人\n・アポ数（SEのみ）：'+(o.apoSE||'　')+'人\n・金塚さんへの紹介数：'+(o.kanezuka||'　')+'人（'+(o.kanezukaNames||'')+'）';}
+function fmtActionObj(o){o=o||{};return '・イベント参加数：'+(o.event||'　')+'件\n・連絡先交換数（SE以外も含む）：'+(o.contact||'　')+'人\n・アポ数（SEのみ）：'+(o.apoSE||'　')+'人\n・キーパーソンへの紹介数：'+(o.kanezuka||'　')+'人（'+(o.kanezukaNames||'')+'）';}
 function addWeekly(){
   const list=state.weeklyReviews.slice().sort((a,b)=>(a.periodStart||'').localeCompare(b.periodStart||''));
   const prev=list[list.length-1];
@@ -2545,11 +2545,11 @@ function wkGoalTable(id,field,obj){
 }
 function wkActionTable(id,obj){
   obj=obj||{};
-  const rows=[['event','イベント参加数（件）'],['contact','連絡先交換数（SE以外も含む・人）'],['apoSE','アポ数（SEのみ・人）'],['kanezuka','金塚さんへの紹介数（人）']];
+  const rows=[['event','イベント参加数（件）'],['contact','連絡先交換数（SE以外も含む・人）'],['apoSE','アポ数（SEのみ・人）'],['kanezuka','キーパーソンへの紹介数（人）']];
   return '<div class="tbl-wrap"><table class="goal wknum" style="min-width:0"><tr><th style="min-width:170px"></th><th style="width:80px">数字</th></tr>'+
     rows.map(r=>'<tr><td style="text-align:left">'+r[1]+'</td><td><input type="text" inputmode="numeric" value="'+esc(obj[r[0]]||'')+'" oninput="setWeeklyNum(\''+id+'\',\'actionResult\',\''+r[0]+'\',this.value)"></td></tr>').join('')+
     '</table></div>'+
-    '<div class="field" style="margin-top:8px"><label>紹介した人の名前（金塚さんへの紹介）</label><input type="text" value="'+esc(obj.kanezukaNames||'')+'" oninput="setWeeklyNum(\''+id+'\',\'actionResult\',\'kanezukaNames\',this.value)"></div>';
+    '<div class="field" style="margin-top:8px"><label>紹介した人の名前（キーパーソンへの紹介）</label><input type="text" value="'+esc(obj.kanezukaNames||'')+'" oninput="setWeeklyNum(\''+id+'\',\'actionResult\',\'kanezukaNames\',this.value)"></div>';
 }
 function weeklyPreviewText(id){
   const w=state.weeklyReviews.find(x=>x.id===id); if(!w)return '';
