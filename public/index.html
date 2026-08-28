@@ -2028,15 +2028,15 @@ function prevSheetMetrics(date){
   }
   return null;
 }
-/* 今月の数字の「結果」を、その日の昼12時を過ぎたら前日の結果で埋める。
+/* 今月の数字の「結果」を、そのシートの日付の昼12時を過ぎたら前日の結果で埋める。
+   ・今日のシートに限らず、過去のシートを後日開いた場合（例：8/28のシートを8/29に開く）も対象
    ・結果欄が全部空のときだけ入れる（入力済みは触らない）
    ・一度入れたら metricCarried=true にして再適用しない（＝以後は自由に編集・削除できる）
-   ・引き継ぎ元は「前の日のシートの結果」を直接参照（日付をまたいでも反映される） */
+   ・引き継ぎ元は「前の日のシートの結果」を直接参照（前日が未作成なら、作成済みで一番近い日の結果） */
 function applyCarriedMetrics(date){
   const s=state.schedules[date]; if(!s)return;
   if(s.metricCarried)return;
-  if(date!==today())return;      /* 「その日（今日）の分のみ」＝過去・未来のシートは自動で入れない */
-  if(!noonPassed(date))return;   /* 昼12時を過ぎてから */
+  if(!noonPassed(date))return;   /* そのシートの日付の昼12時を過ぎてから */
   const m=s.metrics||{};
   const hasAny=Object.keys(m).some(k=>String(m[k]==null?'':m[k]).trim()!=='');
   if(hasAny){ s.metricCarried=true; save(); return; } /* 既に入力あり＝引き継がず、以後も再適用しない */
