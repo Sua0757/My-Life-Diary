@@ -428,14 +428,28 @@ table.abdfit td.c-del button{border:none; background:var(--red-bg); color:var(--
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
     <h1>My Life手帳</h1>
-    <p class="hint">メールアドレスでログインしてください。<br>はじめての方は下から新しく作成できます。</p>
-    <div class="field"><label>メールアドレス</label><input type="email" id="authEmail" autocomplete="username"></div>
-    <div class="field"><label>パスワード</label><input type="password" id="authPassword" autocomplete="current-password"></div>
-    <div class="auth-error" id="authError" style="display:none"></div>
-    <button class="btn primary block" onclick="doLogin()">ログイン</button>
-    <div style="display:flex;align-items:center;gap:10px;margin:16px 0 10px;color:var(--sub);font-size:12px"><span style="flex:1;height:1px;background:var(--line)"></span>はじめての方<span style="flex:1;height:1px;background:var(--line)"></span></div>
-    <button class="btn ghost block" onclick="doSignup()">＋ 新しくアカウントを作成</button>
-    <div class="auth-status" id="authStatus"></div>
+    <div id="authLoginBlock">
+      <p class="hint">メールアドレスでログインしてください。</p>
+      <div class="field"><label>メールアドレス</label><input type="email" id="authEmail" autocomplete="username"></div>
+      <div class="field"><label>パスワード</label><input type="password" id="authPassword" autocomplete="current-password"></div>
+      <label style="display:flex;align-items:center;gap:6px;margin:-2px 0 14px;font-size:12px;color:var(--sub)">
+        <input type="checkbox" id="authRemember" style="width:auto;margin:0">次回からメールアドレスとパスワードを自動で入力する
+      </label>
+      <div class="auth-error" id="authError" style="display:none"></div>
+      <button class="btn primary block" onclick="doLogin()">ログイン</button>
+      <div class="auth-status" id="authStatus"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 10px;color:var(--sub);font-size:12px"><span style="flex:1;height:1px;background:var(--line)"></span>はじめての方<span style="flex:1;height:1px;background:var(--line)"></span></div>
+      <button class="btn ghost block" onclick="showSignupScreen()">＋ 新しくアカウントを作成</button>
+    </div>
+    <div id="authSignupBlock" style="display:none">
+      <p class="hint">メールアドレスと6文字以上のパスワードを入力してください。</p>
+      <div class="field"><label>メールアドレス</label><input type="email" id="signupEmail" autocomplete="username"></div>
+      <div class="field"><label>パスワード</label><input type="password" id="signupPassword" autocomplete="new-password"></div>
+      <div class="auth-error" id="signupError" style="display:none"></div>
+      <button class="btn primary block" onclick="doSignup()">登録する</button>
+      <div class="auth-status" id="signupStatus"></div>
+      <div style="text-align:center;margin-top:16px"><button class="btn ghost block" onclick="showLoginScreen()">← ログイン画面に戻る</button></div>
+    </div>
   </div>
 </div>
 <div id="appRoot" style="display:none">
@@ -2827,13 +2841,44 @@ function applySavedToState(saved){
 function showAuthScreen(msg){
   document.getElementById('appRoot').style.display='none';
   document.getElementById('authScreen').style.display='flex';
+  showLoginScreen();
+  loadRememberedLogin();
   const s=document.getElementById('authStatus'); if(s)s.textContent=msg||'';
-  const e=document.getElementById('authError'); if(e)e.style.display='none';
 }
 function showApp(){
   document.getElementById('authScreen').style.display='none';
   document.getElementById('appRoot').style.display='';
 }
+function showLoginScreen(){
+  document.getElementById('authLoginBlock').style.display='';
+  document.getElementById('authSignupBlock').style.display='none';
+  const e=document.getElementById('authError'); if(e)e.style.display='none';
+  const s=document.getElementById('authStatus'); if(s)s.textContent='';
+  const se=document.getElementById('signupError'); if(se)se.style.display='none';
+  const ss=document.getElementById('signupStatus'); if(ss)ss.textContent='';
+}
+function showSignupScreen(){
+  document.getElementById('authLoginBlock').style.display='none';
+  document.getElementById('authSignupBlock').style.display='';
+  const e=document.getElementById('authError'); if(e)e.style.display='none';
+  const s=document.getElementById('authStatus'); if(s)s.textContent='';
+  const se=document.getElementById('signupError'); if(se)se.style.display='none';
+  const ss=document.getElementById('signupStatus'); if(ss)ss.textContent='';
+}
+/* 「次回から自動で入力する」の記憶（この端末のブラウザ内にのみ保存） */
+const REMEMBER_KEY='mylife_remember_login';
+function loadRememberedLogin(){
+  try{
+    const raw=localStorage.getItem(REMEMBER_KEY); if(!raw)return;
+    const d=JSON.parse(raw);
+    const emEl=document.getElementById('authEmail'), pwEl=document.getElementById('authPassword'), ckEl=document.getElementById('authRemember');
+    if(emEl&&d.email)emEl.value=d.email;
+    if(pwEl&&d.password)pwEl.value=d.password;
+    if(ckEl)ckEl.checked=true;
+  }catch(e){}
+}
+function saveRememberedLogin(email,password){ try{localStorage.setItem(REMEMBER_KEY,JSON.stringify({email,password}));}catch(e){} }
+function clearRememberedLogin(){ try{localStorage.removeItem(REMEMBER_KEY);}catch(e){} }
 async function doLogin(){
   if(sdkLoadFailed||!sb){
     const errEl=document.getElementById('authError');
@@ -2843,6 +2888,7 @@ async function doLogin(){
   }
   const email=document.getElementById('authEmail').value.trim();
   const password=document.getElementById('authPassword').value;
+  const remember=document.getElementById('authRemember').checked;
   const errEl=document.getElementById('authError');
   const statusEl=document.getElementById('authStatus');
   errEl.style.display='none';
@@ -2856,6 +2902,7 @@ async function doLogin(){
       errEl.style.display='block';
       return;
     }
+    if(remember)saveRememberedLogin(email,password); else clearRememberedLogin();
     currentUser=data.user;
     await afterLogin();
   }catch(e){
@@ -2866,15 +2913,15 @@ async function doLogin(){
 }
 async function doSignup(){
   if(sdkLoadFailed||!sb){
-    const errEl=document.getElementById('authError');
+    const errEl=document.getElementById('signupError');
     errEl.textContent='アプリの部品を読み込めませんでした。電波の良い場所で、ページを一度再読み込みしてもう一度お試しください。';
     errEl.style.display='block';
     return;
   }
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  const errEl=document.getElementById('authError');
-  const statusEl=document.getElementById('authStatus');
+  const email=document.getElementById('signupEmail').value.trim();
+  const password=document.getElementById('signupPassword').value;
+  const errEl=document.getElementById('signupError');
+  const statusEl=document.getElementById('signupStatus');
   errEl.style.display='none';
   if(!email||!password){errEl.textContent='メールアドレスとパスワードを入力してください';errEl.style.display='block';return;}
   if(password.length<6){errEl.textContent='パスワードは6文字以上で作成してください';errEl.style.display='block';return;}
@@ -2893,7 +2940,7 @@ async function doSignup(){
       currentUser=data.user; await afterLogin();
     }else{
       /* メール確認オン → 確認メール送信済み */
-      statusEl.textContent='確認メールを送信しました。メール内のリンクを開いて認証してから、上の「ログイン」でお進みください。';
+      statusEl.textContent='確認メールを送信しました。メール内のリンクを開いて認証してから、ログイン画面でお進みください。';
     }
   }catch(e){
     statusEl.textContent='';
@@ -3019,6 +3066,9 @@ function lockReadOnly(){
   const pwEl=document.getElementById('authPassword'), emEl=document.getElementById('authEmail');
   if(pwEl)pwEl.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
   if(emEl)emEl.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  const spwEl=document.getElementById('signupPassword'), semEl=document.getElementById('signupEmail');
+  if(spwEl)spwEl.addEventListener('keydown',e=>{if(e.key==='Enter')doSignup();});
+  if(semEl)semEl.addEventListener('keydown',e=>{if(e.key==='Enter')doSignup();});
   if(sdkLoadFailed||!sb){
     showAuthScreen('アプリの部品を読み込めませんでした。電波の良い場所でページを再読み込みしてください。');
     return;
