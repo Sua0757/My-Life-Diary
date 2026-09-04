@@ -268,6 +268,7 @@ table.mng td.stick{z-index:4;}
 table.mng select{padding:4px 6px; font-size:12.5px; width:auto; min-width:60px;}
 .abcd-A{color:var(--green); font-weight:800;} .abcd-B{color:var(--indigo); font-weight:800;}
 .abcd-C{color:var(--sub); font-weight:800;} .abcd-D{color:var(--amber); font-weight:800;}
+.abcd-E{color:var(--red); font-weight:800;}
 
 /* goals table */
 table.goal{border-collapse:collapse; width:100%; font-size:13px;}
@@ -1192,10 +1193,11 @@ function computeAlerts(){
   Object.keys(byName).forEach(name=>{
     const recs=byName[name].slice().sort((x,y)=>(x.apoDate||'').localeCompare(y.apoDate||''));
     const latest=recs[recs.length-1];
+    const base=recs.find(r=>(Number(r.count)||1)===1)||latest; /* ABCD管理上の代表（1回目）の記録 */
     const strat=joinVal(latest.strategySel,latest.strategy);
-    if(strat.includes('終了'))return;
+    if(strat.includes('終了')||base.abcd==='E')return; /* 次の戦略が終了、またはABCDがE（終了）の方は対象外 */
     const d=daysSince(latest.apoDate);
-    if(latest.apoDate&&d>=30){alerts.push({name,days:d,last:latest.apoDate,id:latest.id});}
+    if(latest.apoDate&&d>=30){alerts.push({name,days:d,last:latest.apoDate,id:latest.id,baseId:base.id});}
   });
   alerts.sort((a,b)=>b.days-a.days);
   return alerts;
@@ -1208,10 +1210,19 @@ function updateBell(){
 function showAlerts(){
   const alerts=computeAlerts();
   openModal('<h3>🔔 1か月以上アポが空いている方</h3>'+
-    (alerts.length?alerts.map(a=>'<div class="opt-row" style="cursor:pointer" onclick="closeModal();openApoForm(\''+a.id+'\')"><span><b>'+esc(a.name)+'</b>さん<br><small style="color:var(--sub)">最終アポ：'+fmtDate(a.last)+'（'+a.days+'日経過）</small></span><span class="chip amber">'+a.days+'日</span></div>').join(''):
+    (alerts.length?alerts.map(a=>'<div class="opt-row"><span style="cursor:pointer" onclick="closeModal();openApoForm(\''+a.id+'\')"><b>'+esc(a.name)+'</b>さん<br><small style="color:var(--sub)">最終アポ：'+fmtDate(a.last)+'（'+a.days+'日経過）</small></span>'+
+      '<span style="display:flex;align-items:center;gap:6px;flex:none"><span class="chip amber">'+a.days+'日</span>'+
+      '<button class="btn subtle small" onclick="event.stopPropagation();finishAlertPerson(\''+a.baseId+'\')">終了にする</button></span></div>').join(''):
     '<div class="empty">現在、1か月以上空いている方はいません 🎉</div>')+
-    '<p class="hint" style="margin-top:12px">※「次の戦略」で「終了」を選んだ方は対象外です。アプリを開いたときに自動でチェックされ、通知を許可するとスマホに通知が届きます。</p>'+
+    '<p class="hint" style="margin-top:12px">※「終了にする」を押すと、その方のABCDが「E：終了」になり、この通知の対象外になります。<br>※「次の戦略」で「終了」を選んだ方も対象外です。アプリを開いたときに自動でチェックされ、通知を許可するとスマホに通知が届きます。</p>'+
     '<div class="btn-row"><button class="btn subtle block" onclick="closeModal()">閉じる</button></div>');
+}
+function finishAlertPerson(baseId){
+  const a=state.apos.find(x=>x.id===baseId); if(!a)return;
+  a.abcd='E'; a.updatedAt=Date.now(); save(); syncApoRow(baseId);
+  toast((a.name||'この方')+'さんを終了にしました');
+  render();
+  showAlerts(); /* 一覧から消えた状態で通知モーダルを再表示 */
 }
 function tryNotify(){
   const alerts=computeAlerts();
@@ -1436,15 +1447,29 @@ function pickPlace(id,val){
   if(inp)inp.value=next;
   document.querySelectorAll('.place-chip').forEach(b=>b.classList.toggle('on',b.dataset.v===next));
 }
-function apoListView(){
+function apoListBody(){
   const alerts=computeAlerts();
   const apos=state.apos.slice();
   const mode=state.ui.apoView||'month';
+  const q=(state.ui.apoSearch||'').trim();
   const byDateDesc=(a,b)=>(b.apoDate||'').localeCompare(a.apoDate||'')||(b.createdAt-a.createdAt); /* 新しい日付が上 */
-  let body='';
+  const alertHtml=alerts.length?'<div class="alert-banner"><h3>⚠ 最終アポから1か月以上経過</h3><ul>'+alerts.slice(0,5).map(a=>'<li><b>'+esc(a.name)+'</b>さん（'+a.days+'日経過）</li>').join('')+'</ul>'+(alerts.length>5?'<div class="hint">ほか'+(alerts.length-5)+'名 — 🔔から確認</div>':'')+'</div>':'';
+  const addBtn='<div class="btn-row"><button class="btn primary block" onclick="addApo()">＋ 新しいアポ記録</button></div>';
   if(!apos.length){
-    body='<div class="empty">まだアポ記録がありません。<br>「＋ 新しいアポ記録」から作成しましょう。</div>';
-  }else if(mode==='all'){
+    return alertHtml+addBtn+'<div class="empty">まだアポ記録がありません。<br>「＋ 新しいアポ記録」から作成しましょう。</div>';
+  }
+  if(q){
+    /* 名前・カタカナ表記のどちらかに一致すれば検索結果に含める */
+    const matched=apos.filter(a=>{
+      const nm=a.name||'', kn=a.nameKana||toKatakana(nm)||'';
+      return nm.includes(q)||kn.includes(q);
+    }).sort(byDateDesc);
+    return alertHtml+addBtn+
+      '<div class="hint" style="margin-bottom:8px">「'+esc(q)+'」の検索結果：'+matched.length+'件</div>'+
+      (matched.length?matched.map(apoCard).join(''):'<div class="empty">該当するアポ記録が見つかりません。</div>');
+  }
+  let body='';
+  if(mode==='all'){
     const sorted=apos.slice().sort(byDateDesc);
     body='<div class="hint" style="margin-bottom:8px">全'+sorted.length+'件（新しい順）</div>'+sorted.map(apoCard).join('');
   }else{
@@ -1455,11 +1480,20 @@ function apoListView(){
       (monthApos.length?monthApos.map(apoCard).join('')
         :'<div class="empty">'+monthLabel(cur)+'のアポ記録はありません。<br>上の📅で他の月を選べます。</div>');
   }
-  return '<h2 class="page">アポ記録 <small>全'+apos.length+'件</small></h2>'+
-    (alerts.length?'<div class="alert-banner"><h3>⚠ 最終アポから1か月以上経過</h3><ul>'+alerts.slice(0,5).map(a=>'<li><b>'+esc(a.name)+'</b>さん（'+a.days+'日経過）</li>').join('')+'</ul>'+(alerts.length>5?'<div class="hint">ほか'+(alerts.length-5)+'名 — 🔔から確認</div>':'')+'</div>':'')+
-    '<div class="btn-row"><button class="btn primary block" onclick="addApo()">＋ 新しいアポ記録</button></div>'+
+  return alertHtml+addBtn+
     '<div class="seg"><button class="'+(mode==='month'?'on':'')+'" onclick="state.ui.apoView=\'month\';save();render()">月ごとのリスト</button><button class="'+(mode==='all'?'on':'')+'" onclick="state.ui.apoView=\'all\';save();render()">全体のリスト</button></div>'+
     body;
+}
+function onApoSearchInput(v){
+  state.ui.apoSearch=v; save();
+  const el=document.getElementById('apoListBody');
+  if(el)el.innerHTML=apoListBody(); /* 入力欄自体は再描画しない（フォーカスが外れないように） */
+}
+function apoListView(){
+  const q=state.ui.apoSearch||'';
+  return '<h2 class="page">アポ記録 <small>全'+state.apos.length+'件</small></h2>'+
+    '<div class="field" style="margin-bottom:10px">'+vText('apoSearchInput',q,'🔍 名前で検索','oninput="onApoSearchInput(this.value)"')+'</div>'+
+    '<div id="apoListBody">'+apoListBody()+'</div>';
 }
 function apoCard(a){
   return '<div class="card tap apo-card" onclick="openApoForm(\''+a.id+'\')">'+
@@ -1470,7 +1504,7 @@ function apoCard(a){
     '<div class="rec-title">'+esc(apoTitle(a))+'</div>'+
     '<div class="rec-sub">アポ日：'+fmtDate(a.apoDate)+'　アポ回数：'+esc(a.count||'1')+'回目</div>'+
     '<div class="rec-meta">'+
-      (a.abcd?'<span class="chip '+(a.abcd==='A'?'green':a.abcd==='B'?'blue':a.abcd==='D'?'amber':'')+'">'+a.abcd+'</span>':'')+
+      (a.abcd?'<span class="chip '+(a.abcd==='A'?'green':a.abcd==='B'?'blue':a.abcd==='D'?'amber':a.abcd==='E'?'red':'')+'">'+a.abcd+'</span>':'')+
       (joinVal(a.jobSel,a.job)?'<span class="chip">'+esc(joinVal(a.jobSel,a.job))+'</span>':'')+
     '</div></div>';
 }
@@ -1724,7 +1758,7 @@ function refFormView(id){
 /* ============================================================
    アポ管理（一覧表）
    ============================================================ */
-const ABCD_LABEL={A:'A：紹介済み',B:'B：紹介末/いい人',C:'C：今は違う/断られた',D:'D：FPでアプローチ'};
+const ABCD_LABEL={A:'A：紹介済み',B:'B：紹介末/いい人',C:'C：今は違う/断られた',D:'D：FPでアプローチ',E:'E：終了'};
 /* イベント名 → アイコン（部分一致で柔軟にマッチ。未登録の独自イベントは 🏷️） */
 const EVENT_ICON_MAP=[
   ['オンライン飲み','💻'],['飲み会','🍺'],['ボドゲ','🃏'],['ボードゲーム','🃏'],
@@ -1772,7 +1806,7 @@ function manageRow(a,no){
     '<td>'+sel('star',['★','☆'],a.star)+'</td>'+
     '<td>'+esc(a.nameKana||toKatakana(a.name||''))+'</td>'+
     '<td class="stick" style="cursor:pointer;color:var(--indigo-deep);font-weight:700" onclick="openApoForm(\''+a.id+'\')">'+esc(a.name||'（未入力）')+'</td>'+
-    '<td class="abcd-'+esc(a.abcd)+'">'+sel('abcd',['A','B','C','D'],a.abcd)+'</td>'+
+    '<td class="abcd-'+esc(a.abcd)+'">'+sel('abcd',['A','B','C','D','E'],a.abcd)+'</td>'+
     '<td>'+(a.age!==''?grownNumber(a.age,a.ageYear):'')+'</td>'+
     '<td>'+(a.exp!==''?grownNumber(a.exp,a.expYear):'')+'</td>'+
     '<td>'+esc(joinVal(a.incomeSel,a.income))+'</td>'+
@@ -1794,7 +1828,7 @@ function manageView(){
   else if(mode==='order'){
     body='<div class="tbl-wrap mng-wrap"><table class="mng">'+head+apos.map((a,i)=>manageRow(a,i+1)).join('')+'</table></div>';
   }else{
-    body=['A','B','C','D',''].map(g=>{
+    body=['A','B','C','D','E',''].map(g=>{
       const rows=apos.filter(a=>(a.abcd||'')===g);
       if(!rows.length)return '';
       return '<div class="month-head"><span class="tab">'+(g?esc(ABCD_LABEL[g]):'未分類')+'</span><span class="cnt">'+rows.length+'名</span></div>'+
@@ -1803,7 +1837,7 @@ function manageView(){
   }
   return '<h2 class="page">アポ管理 <small>全'+apos.length+'件・更新が新しい順</small></h2>'+
     '<div class="seg"><button class="'+(mode==='order'?'on':'')+'" onclick="state.ui.mngView=\'order\';save();render()">更新順リスト</button><button class="'+(mode==='abcd'?'on':'')+'" onclick="state.ui.mngView=\'abcd\';save();render()">ABCD別リスト</button></div>'+
-    '<p class="hint" style="margin-bottom:8px">1回目のアポの方のみ一覧に表示されます（複製で作った2回目以降のアポは、同じ方としてすでに載っているため表示されません）。<br>★：稼働中　☆：参画予定<br>A：紹介済み　B：紹介末/いい人　C：今は違う/断られた　D：FPでアプローチ<br>表は横にスクロールできます（見出しと「名前」の列は固定されて動きません）。ABCD・直紹介・イベント・スキルシートは表の中で直接変更できます。</p>'+
+    '<p class="hint" style="margin-bottom:8px">1回目のアポの方のみ一覧に表示されます（複製で作った2回目以降のアポは、同じ方としてすでに載っているため表示されません）。<br>★：稼働中　☆：参画予定<br>A：紹介済み　B：紹介末/いい人　C：今は違う/断られた　D：FPでアプローチ　E：終了<br>表は横にスクロールできます（見出しと「名前」の列は固定されて動きません）。ABCD・直紹介・イベント・スキルシートは表の中で直接変更できます。</p>'+
     body;
 }
 
