@@ -316,7 +316,11 @@
   /* ---------- message ---------- */
   #message-screen{
     background:linear-gradient(160deg,#fff 0%, #ffeef5 45%, #ffe1ee 100%);
-    overflow:hidden;
+    justify-content:flex-start;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-top:max(56px, env(safe-area-inset-top));
+    padding-bottom:calc(40px + env(safe-area-inset-bottom));
   }
   .floaty{
     position:absolute;
