@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Happy Birthday なおやさん</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#ffd76a;
+    --gold-deep:#f2b705;
+    --pink:#ff8fc0;
+    --pink-deep:#ff5fa2;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button{
+    font-family:inherit;
+    border:none;
+    outline:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ---------- screens ---------- */
+  .screen{
+    position:fixed;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .7s ease;
+    padding:24px;
+    text-align:center;
+  }
+  .screen.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  /* ---------- opening ---------- */
+  #opening-screen{
+    background:radial-gradient(ellipse at 50% 110%, #241a4a 0%, #0b0d2e 45%, #050414 100%);
+    overflow:hidden;
+  }
+  #fireworks-canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:1;
+  }
+  .opening-content{
+    position:relative;
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:28px;
+  }
+  .tap-start-overlay{
+    position:absolute;
+    inset:0;
+    z-index:5;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(3,3,15,0.55);
+    backdrop-filter:blur(2px);
+    transition:opacity .5s ease;
+  }
+  .tap-start-overlay.hidden{
+    opacity:0;
+    pointer-events:none;
+  }
+  .tap-start-btn{
+    background:linear-gradient(135deg,var(--gold),var(--pink));
+    color:#2a1440;
+    font-weight:800;
+    font-size:1.15rem;
+    padding:18px 34px;
+    border-radius:999px;
+    box-shadow:0 8px 24px rgba(255,180,120,.35);
+    animation:pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.06); }
+  }
+  .title-text{
+    color:#fff;
+    font-size:clamp(1.6rem, 7vw, 2.6rem);
+    font-weight:900;
+    line-height:1.5;
+    text-shadow:0 0 18px rgba(255,255,255,.25);
+    opacity:0;
+    transform:scale(.8);
+    transition:opacity 1.1s ease, transform 1.1s ease;
+  }
+  .title-text.show{
+    opacity:1;
+    transform:scale(1);
+  }
+  .title-text .gold{
+    color:var(--gold);
+    text-shadow:0 0 24px rgba(255,215,100,.8);
+  }
+  .next-btn{
+    background:linear-gradient(135deg,var(--pink-deep),var(--gold-deep));
+    color:#fff;
+    font-weight:700;
+    font-size:1.05rem;
+    padding:16px 32px;
+    border-radius:999px;
+    box-shadow:0 8px 20px rgba(0,0,0,.35);
+    opacity:0;
+    transform:translateY(12px);
+    transition:opacity .8s ease .2s, transform .8s ease .2s, filter .15s ease;
+  }
+  .next-btn.show{
+    opacity:1;
+    transform:translateY(0);
+  }
+  .next-btn:active{
+    filter:brightness(.9);
+    transform:scale(.97);
+  }
+  .mute-btn{
+    position:absolute;
+    top:16px;
+    right:16px;
+    z-index:6;
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:rgba(255,255,255,.12);
+    color:#fff;
+    font-size:1.2rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* ---------- coupons ---------- */
+  #coupon-screen{
+    background:linear-gradient(180deg,#fff3e6 0%, #ffe4f0 55%, #ffd9ec 100%);
+    justify-content:flex-start;
+    padding-top:max(28px, env(safe-area-inset-top));
+    padding-bottom:110px;
+    overflow-y:auto;
+  }
+  .coupon-title{
+    font-size:clamp(1.3rem,5.5vw,1.8rem);
+    font-weight:800;
+    color:#c2447a;
+    margin:8px 0 20px;
+  }
+  .coupon-list{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    width:100%;
+    max-width:440px;
+  }
+  .card{
+    width:100%;
+    height:158px;
+    perspective:1200px;
+  }
+  .card-inner{
+    position:relative;
+    width:100%;
+    height:100%;
+    transition:transform .65s cubic-bezier(.2,.8,.3,1.1);
+    transform-style:preserve-3d;
+  }
+  .card.flipped .card-inner{
+    transform:rotateY(180deg);
+  }
+  .card-face{
+    position:absolute;
+    inset:0;
+    backface-visibility:hidden;
+    border-radius:18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    text-align:center;
+  }
+  .card-front{
+    background:linear-gradient(135deg,var(--pink),var(--gold));
+    color:#fff;
+    box-shadow:0 8px 18px rgba(200,80,140,.28);
+  }
+  .card-back{
+    background:#fffaf3;
+    color:#7a4a2b;
+    border:2px solid var(--gold);
+    transform:rotateY(180deg);
+  }
+  .card.locked .card-front{
+    filter:grayscale(.25) brightness(.88);
+  }
+  .card.locked .card-back{
+    color:#a08a78;
+    border-color:#d8c9b8;
+  }
+  .card-name{
+    font-size:1.08rem;
+    font-weight:800;
+    line-height:1.4;
+  }
+  .card-hint{
+    margin-top:10px;
+    font-size:.8rem;
+    opacity:.9;
+  }
+  .badge{
+    position:absolute;
+    top:10px;
+    right:10px;
+    background:rgba(0,0,0,.35);
+    color:#fff;
+    font-size:.7rem;
+    padding:4px 9px;
+    border-radius:999px;
+    font-weight:700;
+  }
+  .card-desc{
+    font-size:.95rem;
+    line-height:1.6;
+    font-weight:600;
+  }
+  .to-message-wrap{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    padding:16px 20px calc(16px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg, rgba(255,217,236,.98) 60%, rgba(255,217,236,0));
+    display:flex;
+    justify-content:center;
+    z-index:4;
+  }
+
+  /* ---------- message ---------- */
+  #message-screen{
+    background:linear-gradient(160deg,#fff 0%, #ffeef5 45%, #ffe1ee 100%);
+    overflow:hidden;
+  }
+  .floaty{
+    position:absolute;
+    font-size:1.6rem;
+    opacity:.55;
+    animation:floatUp linear infinite;
+    z-index:0;
+    user-select:none;
+  }
+  @keyframes floatUp{
+    from{ transform:translateY(110vh) rotate(0deg); }
+    to{ transform:translateY(-15vh) rotate(25deg); }
+  }
+  .message-card{
+    position:relative;
+    z-index:1;
+    max-width:480px;
+    background:rgba(255,255,255,.75);
+    border-radius:24px;
+    padding:30px 24px;
+    box-shadow:0 10px 30px rgba(255,140,180,.25);
+  }
+  .message-line{
+    font-size:clamp(1rem,4.5vw,1.2rem);
+    color:#8a3a5c;
+    line-height:1.9;
+    font-weight:600;
+    opacity:0;
+    transform:translateY(10px);
+    transition:opacity .9s ease, transform .9s ease;
+  }
+  .message-line.show{
+    opacity:1;
+    transform:translateY(0);
+  }
+  .message-line.spacer{
+    height:.4em;
+  }
+  .restart-btn{
+    margin-top:26px;
+    background:#fff;
+    color:#c2447a;
+    border:2px solid var(--pink-deep);
+    font-weight:700;
+    font-size:1rem;
+    padding:14px 28px;
+    border-radius:999px;
+    opacity:0;
+    transition:opacity .8s ease;
+    position:relative;
+    z-index:1;
+  }
+  .restart-btn.show{ opacity:1; }
+  .restart-btn:active{
+    background:#ffe6f0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ DATA (edit here) ============ -->
+<script>
+  const COUPONS = [
+    { id: 1, name: "ご飯奢ってあげてもいいけど？券", ready: true,  desc: "この券を見せると、ご飯を1回ごちそうしてもらえる…かも？（※本人の気分次第）" },
+    { id: 2, name: "バリア券",                          ready: true,  desc: "8時間、乳首を触られるのを防ぐことができる無敵バリアを発動できる券" },
+    { id: 3, name: "タピっちゃおう券",                   ready: true,  desc: "一緒にタピオカを飲みに行ける券 🧋" },
+    { id: 4, name: "にょきにょき券",                     ready: false, desc: "Coming Soon…✨ お楽しみに" },
+    { id: 5, name: "◯ん◯◯ー券",                        ready: false, desc: "Coming Soon…✨ お楽しみに" },
+  ];
+
+  const MESSAGE_LINES = [
+    "直哉さんお誕生日おめでとう🎊",
+    "",
+    "今年は直哉さんとの時間がいっぱいの年で、",
+    "いつも笑わせてくれてありがとう🤍",
+    "",
+    "…（続きはまた送る）",
+  ];
+</script>
+<!-- ============================================ -->
+
+<!-- 1. opening -->
+<section id="opening-screen" class="screen active">
+  <canvas id="fireworks-canvas"></canvas>
+  <button class="mute-btn" id="mute-btn" aria-label="音を消す">🔊</button>
+  <div class="tap-start-overlay" id="tap-start-overlay">
+    <button class="tap-start-btn" id="tap-start-btn">🎉 タップして開く</button>
+  </div>
+  <div class="opening-content">
+    <div class="title-text" id="title-text">Happy Birthday<br><span class="gold">なおやさん</span></div>
+    <button class="next-btn" id="to-coupon-btn">プレゼントを見る 🎁</button>
+  </div>
+</section>
+
+<!-- 2. coupons -->
+<section id="coupon-screen" class="screen">
+  <div class="coupon-title">なおやさんへの5枚のクーポン 🎫</div>
+  <div class="coupon-list" id="coupon-list"></div>
+  <div class="to-message-wrap">
+    <button class="next-btn" id="to-message-btn" style="opacity:1;transform:none;">メッセージへ 💌</button>
+  </div>
+</section>
+
+<!-- 3. message -->
+<section id="message-screen" class="screen">
+  <div class="message-card" id="message-card"></div>
+  <button class="restart-btn" id="restart-btn">もう一度最初から見る 🔄</button>
+</section>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------------- screen navigation ---------------- */
+  const screens = {
+    opening: document.getElementById('opening-screen'),
+    coupon:  document.getElementById('coupon-screen'),
+    message: document.getElementById('message-screen'),
+  };
+
+  function goTo(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+    if (name === 'opening'){
+      startFireworks();
+    } else {
+      stopFireworks();
+    }
+    if (name === 'message'){
+      animateMessage();
+    }
+  }
+
+  /* ---------------- audio (synthesized, no assets) ---------------- */
+  let audioCtx = null;
+  let muted = false;
+  let melodyTimers = [];
+
+  const NOTE_FREQ = {
+    C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+    C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99,
+  };
+
+  // Simple "Happy Birthday" melody: [note, beats]
+  const MELODY = [
+    ['G4',0.5],['G4',0.5],['A4',1],['G4',1],['C5',1],['B4',2],
+    ['G4',0.5],['G4',0.5],['A4',1],['G4',1],['D5',1],['C5',2],
+    ['G4',0.5],['G4',0.5],['G5',1],['E5',1],['C5',1],['B4',1],['A4',2],
+    ['F5',0.5],['F5',0.5],['E5',1],['C5',1],['D5',1],['C5',2],
+  ];
+
+  function ensureAudio(){
+    if (!audioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playNote(freq, startTime, duration){
+    if (!audioCtx || muted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.18, startTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
+  }
+
+  function playMelody(){
+    if (!audioCtx || muted) return;
+    const beat = 0.34;
+    let t = audioCtx.currentTime + 0.15;
+    MELODY.forEach(([note, beats]) => {
+      const dur = beats * beat;
+      playNote(NOTE_FREQ[note], t, dur * 0.92);
+      t += dur;
+    });
+    // loop lightly with a pause
+    melodyTimers.push(setTimeout(playMelody, (t - audioCtx.currentTime + 1.2) * 1000));
+  }
+
+  function stopMelody(){
+    melodyTimers.forEach(clearTimeout);
+    melodyTimers = [];
+  }
+
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    muted = !muted;
+    e.currentTarget.textContent = muted ? '🔇' : '🔊';
+  });
+
+  /* ---------------- fireworks ---------------- */
+  const canvas = document.getElementById('fireworks-canvas');
+  const ctx = canvas.getContext('2d');
+  let rafId = null;
+  let spawnTimer = null;
+  let rockets = [];
+  let running = false;
+
+  const COLORS = ['#ffd76a', '#ff8fc0', '#7ee8fa', '#c9a3ff', '#ffffff'];
+
+  function resizeCanvas(){
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function spawnRocket(){
+    if (rockets.length >= 5) return;
+    const w = window.innerWidth, h = window.innerHeight;
+    rockets.push({
+      x: w * (0.15 + Math.random()*0.7),
+      y: h,
+      targetY: h * (0.18 + Math.random()*0.35),
+      vy: -(8 + Math.random()*3),
+      color: COLORS[Math.floor(Math.random()*COLORS.length)],
+      exploded: false,
+      particles: [],
+      life: 0,
+    });
+  }
+
+  function explode(r){
+    r.exploded = true;
+    const count = 44 + Math.floor(Math.random()*20);
+    for (let i=0;i<count;i++){
+      const angle = (Math.PI*2) * (i/count) + Math.random()*0.2;
+      const speed = 2 + Math.random()*3.4;
+      r.particles.push({
+        x:r.x, y:r.y,
+        vx:Math.cos(angle)*speed,
+        vy:Math.sin(angle)*speed,
+        alpha:1,
+        color:r.color,
+      });
+    }
+  }
+
+  function step(){
+    const w = window.innerWidth, h = window.innerHeight;
+    ctx.fillStyle = 'rgba(6,6,20,0.22)';
+    ctx.fillRect(0,0,w,h);
+
+    rockets.forEach(r => {
+      if (!r.exploded){
+        r.y += r.vy;
+        r.life++;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 2.4, 0, Math.PI*2);
+        ctx.fillStyle = r.color;
+        ctx.fill();
+        if (r.y <= r.targetY || r.life > 90) explode(r);
+      } else {
+        r.particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.045;
+          p.vx *= 0.99;
+          p.alpha -= 0.016;
+          if (p.alpha > 0){
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = Math.max(p.alpha,0);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+        });
+        r.particles = r.particles.filter(p => p.alpha > 0);
+      }
+    });
+    rockets = rockets.filter(r => !r.exploded || r.particles.length > 0);
+
+    if (running) rafId = requestAnimationFrame(step);
+  }
+
+  function startFireworks(){
+    if (running) return;
+    running = true;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    rafId = requestAnimationFrame(step);
+    spawnRocket();
+    spawnTimer = setInterval(() => {
+      if (Math.random() < 0.85) spawnRocket();
+    }, 550);
+  }
+
+  function stopFireworks(){
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    if (spawnTimer) clearInterval(spawnTimer);
+    rockets = [];
+  }
+
+  /* ---------------- opening interactions ---------------- */
+  const tapOverlay = document.getElementById('tap-start-overlay');
+  const tapBtn = document.getElementById('tap-start-btn');
+  const titleText = document.getElementById('title-text');
+  const toCouponBtn = document.getElementById('to-coupon-btn');
+
+  tapBtn.addEventListener('click', () => {
+    ensureAudio();
+    tapOverlay.classList.add('hidden');
+    setTimeout(() => titleText.classList.add('show'), 150);
+    setTimeout(() => toCouponBtn.classList.add('show'), 900);
+    if (audioCtx) playMelody();
+  });
+
+  toCouponBtn.addEventListener('click', () => {
+    goTo('coupon');
+  });
+
+  /* ---------------- coupons ---------------- */
+  const couponList = document.getElementById('coupon-list');
+
+  function renderCoupons(){
+    couponList.innerHTML = '';
+    COUPONS.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'card' + (c.ready ? '' : ' locked');
+
+      const inner = document.createElement('div');
+      inner.className = 'card-inner';
+
+      const front = document.createElement('div');
+      front.className = 'card-face card-front';
+      front.innerHTML = `
+        <div class="card-name">${c.name}</div>
+        <div class="card-hint">${c.ready ? 'TAP して開く' : ''}</div>
+        ${!c.ready ? '<div class="badge">準備中 🔧</div>' : ''}
+      `;
+
+      const back = document.createElement('div');
+      back.className = 'card-face card-back';
+      back.innerHTML = `<div class="card-desc">${c.desc}</div>`;
+
+      inner.appendChild(front);
+      inner.appendChild(back);
+      card.appendChild(inner);
+
+      card.addEventListener('click', () => {
+        card.classList.toggle('flipped');
+      });
+
+      couponList.appendChild(card);
+    });
+  }
+  renderCoupons();
+
+  document.getElementById('to-message-btn').addEventListener('click', () => {
+    goTo('message');
+  });
+
+  /* ---------------- message ---------------- */
+  const messageCard = document.getElementById('message-card');
+  let messageBuilt = false;
+
+  function buildMessage(){
+    messageCard.innerHTML = '';
+    MESSAGE_LINES.forEach(line => {
+      const p = document.createElement('div');
+      if (line === ''){
+        p.className = 'message-line spacer';
+      } else {
+        p.className = 'message-line';
+        p.textContent = line;
+      }
+      messageCard.appendChild(p);
+    });
+    messageBuilt = true;
+  }
+
+  function animateMessage(){
+    if (!messageBuilt) buildMessage();
+    const lines = messageCard.querySelectorAll('.message-line:not(.spacer)');
+    lines.forEach((el, i) => {
+      el.classList.remove('show');
+      setTimeout(() => el.classList.add('show'), 300 + i * 500);
+    });
+    const restartBtn = document.getElementById('restart-btn');
+    restartBtn.classList.remove('show');
+    setTimeout(() => restartBtn.classList.add('show'), 300 + lines.length * 500 + 300);
+
+    spawnFloaties();
+  }
+
+  function spawnFloaties(){
+    const old = screens.message.querySelectorAll('.floaty');
+    old.forEach(el => el.remove());
+    const emojis = ['🤍','💗','🌸','✨','🎀'];
+    for (let i=0;i<10;i++){
+      const el = document.createElement('div');
+      el.className = 'floaty';
+      el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      el.style.left = (Math.random()*90 + 2) + '%';
+      el.style.animationDuration = (9 + Math.random()*8) + 's';
+      el.style.animationDelay = (Math.random()*6) + 's';
+      screens.message.insertBefore(el, screens.message.firstChild);
+    }
+  }
+
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    stopMelody();
+    document.querySelectorAll('.card.flipped').forEach(c => c.classList.remove('flipped'));
+    titleText.classList.remove('show');
+    toCouponBtn.classList.remove('show');
+    tapOverlay.classList.remove('hidden');
+    goTo('opening');
+  });
+
+  /* ---------------- init ---------------- */
+  goTo('opening');
+})();
+</script>
+</body>
+</html>
