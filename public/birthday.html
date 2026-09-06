@@ -55,6 +55,20 @@
     background:radial-gradient(ellipse at 50% 110%, #241a4a 0%, #0b0d2e 45%, #050414 100%);
     overflow:hidden;
   }
+  .opening-photo{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    background-image:url('opening-photo.jpg');
+    background-size:cover;
+    background-position:center 38%;
+  }
+  .opening-dim{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    background:radial-gradient(ellipse at 50% 110%, rgba(36,26,74,.72) 0%, rgba(11,13,46,.8) 45%, rgba(5,4,20,.88) 100%);
+  }
   #fireworks-canvas{
     position:absolute;
     inset:0;
@@ -372,6 +386,8 @@
 
 <!-- 1. opening -->
 <section id="opening-screen" class="screen active">
+  <div class="opening-photo"></div>
+  <div class="opening-dim"></div>
   <canvas id="fireworks-canvas"></canvas>
   <button class="mute-btn" id="mute-btn" aria-label="音を消す">🔊</button>
   <div class="tap-start-overlay" id="tap-start-overlay">
@@ -538,8 +554,12 @@
 
   function step(){
     const w = window.innerWidth, h = window.innerHeight;
-    ctx.fillStyle = 'rgba(6,6,20,0.22)';
+    // fade old trails by reducing alpha (keeps the canvas transparent so the
+    // photo behind it stays visible, instead of painting toward opaque black)
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
     ctx.fillRect(0,0,w,h);
+    ctx.globalCompositeOperation = 'source-over';
 
     rockets.forEach(r => {
       if (!r.exploded){
