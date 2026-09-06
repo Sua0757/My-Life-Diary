@@ -131,6 +131,20 @@
     color:var(--gold);
     text-shadow:0 0 24px rgba(255,215,100,.8);
   }
+  .title-sub{
+    color:#ffeaf3;
+    font-size:clamp(.95rem, 4.2vw, 1.25rem);
+    font-weight:700;
+    line-height:1.7;
+    text-shadow:0 0 12px rgba(255,255,255,.3);
+    opacity:0;
+    transform:translateY(8px);
+    transition:opacity 1s ease, transform 1s ease;
+  }
+  .title-sub.show{
+    opacity:1;
+    transform:translateY(0);
+  }
   .next-btn{
     background:linear-gradient(135deg,var(--pink-deep),var(--gold-deep));
     color:#fff;
@@ -403,6 +417,7 @@
   </div>
   <div class="opening-content">
     <div class="title-text" id="title-text">Happy Birthday<br><span class="gold">なおやさん</span></div>
+    <div class="title-sub" id="title-sub">産まれてきてくれてありがとう！<br>37歳もきゃぴきゃぴしてね💓</div>
     <button class="next-btn" id="to-coupon-btn">プレゼントを見る 🎁</button>
   </div>
 </section>
@@ -624,13 +639,15 @@
   const tapOverlay = document.getElementById('tap-start-overlay');
   const tapBtn = document.getElementById('tap-start-btn');
   const titleText = document.getElementById('title-text');
+  const titleSub = document.getElementById('title-sub');
   const toCouponBtn = document.getElementById('to-coupon-btn');
 
   tapBtn.addEventListener('click', () => {
     ensureAudio();
     tapOverlay.classList.add('hidden');
     setTimeout(() => titleText.classList.add('show'), 150);
-    setTimeout(() => toCouponBtn.classList.add('show'), 900);
+    setTimeout(() => titleSub.classList.add('show'), 550);
+    setTimeout(() => toCouponBtn.classList.add('show'), 1100);
     if (audioCtx) playMelody();
   });
 
@@ -740,6 +757,7 @@
     stopMelody();
     document.querySelectorAll('.card.flipped').forEach(c => c.classList.remove('flipped'));
     titleText.classList.remove('show');
+    titleSub.classList.remove('show');
     toCouponBtn.classList.remove('show');
     tapOverlay.classList.remove('hidden');
     goTo('opening');
