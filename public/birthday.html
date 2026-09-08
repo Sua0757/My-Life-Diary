@@ -573,7 +573,7 @@
     { id: 1, name: "ご飯奢ってあげてもいいけど？券", ready: true,  icon: "🍽️", gradient: "linear-gradient(135deg,#ff9a76,#ffd76a)", desc: "この券を見せると、ご飯を1回ごちそうしてもらえる…かも？（※本人の気分次第）" },
     { id: 2, name: "バリア券",                          ready: true,  icon: "🛡️", gradient: "linear-gradient(135deg,#8ecdf7,#c9a3ff)", desc: "8時間、乳首を触られるのを防ぐことができる無敵バリアを発動できる券" },
     { id: 3, name: "タピっちゃおう券",                   ready: true,  icon: "🧋", gradient: "linear-gradient(135deg,#caa172,#f6dfc0)", desc: "一緒にタピオカを飲みに行ける券 🧋" },
-    { id: 4, name: "にょきにょき券",                     ready: false, unlockDate: "2026-09-11T00:00:00+09:00", icon: "🎁", gradient: "linear-gradient(135deg,#ff9ec7,#ffd76a)", lockedIcon: "🔒", lockedGradient: "linear-gradient(135deg,#c3b3d6,#e6cfc3)", desc: "Coming Soon…✨ お楽しみに" },
+    { id: 4, name: "にょきにょき券",                     ready: false, unlockDate: "2026-09-11T00:00:00+09:00", icon: "🎁", gradient: "linear-gradient(135deg,#ff9ec7,#ffd76a)", lockedIcon: "🔒", lockedGradient: "linear-gradient(135deg,#c3b3d6,#e6cfc3)", desc: "これで飢えに苦しむことはないよ！愛情込めることがポイント💓" },
     { id: 5, name: "◯ん◯◯ー券",                        ready: false, icon: "🔒", gradient: "linear-gradient(135deg,#c3b3d6,#e6cfc3)", desc: "Coming Soon…✨ お楽しみに" },
   ];
 
@@ -1080,6 +1080,13 @@
     return false;
   }
 
+  function lockedBadgeText(c){
+    if (!c.unlockDate) return '準備中 🔧';
+    const m = c.unlockDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return '準備中 🔧';
+    return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)} 解禁 🔓`;
+  }
+
   function loadUsedCoupons(){
     try {
       const raw = localStorage.getItem('naoya-birthday-used-coupons');
@@ -1129,7 +1136,7 @@
         <div class="card-name">${c.name}</div>
         <div class="card-divider"></div>
         <div class="card-hint">${unlocked ? 'TAP して開く' : ''}</div>
-        ${!unlocked ? '<div class="badge">準備中 🔧</div>' : ''}
+        ${!unlocked ? `<div class="badge">${lockedBadgeText(c)}</div>` : ''}
         ${isUsed ? '<div class="used-stamp">使用済み</div>' : ''}
       `;
 
