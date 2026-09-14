@@ -1025,7 +1025,19 @@ function toggleVoice(btn,targetId){
 }
 
 /* ---------- テキストエリア自動リサイズ（全文が見える） ---------- */
-function autoGrow(el){el.style.height='auto';el.style.height=(el.scrollHeight+2)+'px';}
+/* 高さをauto→scrollHeightの順で測り直す間、ページ（とモーダル内）が一瞬一番上に
+   スクロールされてしまう現象を防ぐため、スクロール位置を保存・復元する。
+   （長文を貼り付けてバックスペースで消す時などに、文章の先頭へ飛ぶ不具合の対策） */
+function autoGrow(el){
+  const se=document.scrollingElement;
+  const sy=se?se.scrollTop:window.scrollY;
+  const modal=el.closest('.modal');
+  const my=modal?modal.scrollTop:null;
+  el.style.height='auto';
+  el.style.height=(el.scrollHeight+2)+'px';
+  if(se)se.scrollTop=sy; else window.scrollTo(0,sy);
+  if(modal)modal.scrollTop=my;
+}
 function growAll(){document.querySelectorAll('textarea').forEach(t=>{t.style.overflow='hidden';autoGrow(t);});}
 document.addEventListener('input',e=>{if(e.target&&e.target.tagName==='TEXTAREA')autoGrow(e.target);});
 /* エンターで「同じ列の下の欄」へ移動（スケジュールの予定・変更／各数字表） */
