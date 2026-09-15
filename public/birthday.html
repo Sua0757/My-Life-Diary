@@ -909,7 +909,6 @@
     gridWidth: 0,
     lastTime: 0,
     lastFire: 0,
-    t0: 0,
   };
 
   function initGame(){
@@ -946,7 +945,11 @@
         el.style.width = size + 'px';
         el.style.height = size + 'px';
         invaderGrid.appendChild(el);
-        game.invaders.push({ el, left, top, size, alive: true });
+        game.invaders.push({
+          el, left, top, size, alive: true,
+          offsetX: 0, offsetY: 0, targetX: 0, targetY: 0,
+          nextRetarget: performance.now() + Math.random() * 1000,
+        });
       }
     }
     game.remaining = game.invaders.length;
@@ -958,7 +961,6 @@
     game.moveRight = false;
     game.lastFire = 0;
     game.lastTime = 0;
-    game.t0 = performance.now();
     game.cleared = false;
   }
 
@@ -984,10 +986,19 @@
     game.shipX = Math.max(20, Math.min(arenaW - 20, game.shipX));
     ship.style.left = game.shipX + 'px';
 
-    const elapsed = now - game.t0;
-    const amplitude = Math.max(10, (arenaW - game.gridWidth) / 2 - 4);
-    const offset = Math.sin(elapsed / 1400) * amplitude;
-    invaderGrid.style.left = (game.baseLeft + offset) + 'px';
+    game.invaders.forEach(inv => {
+      if (!inv.alive) return;
+      if (now > inv.nextRetarget){
+        const range = inv.size >= GAME_CELL * 2 ? 14 : 10;
+        inv.targetX = (Math.random() * 2 - 1) * range;
+        inv.targetY = (Math.random() * 2 - 1) * range;
+        inv.nextRetarget = now + 600 + Math.random() * 900;
+      }
+      inv.offsetX += (inv.targetX - inv.offsetX) * 0.04;
+      inv.offsetY += (inv.targetY - inv.offsetY) * 0.04;
+      inv.el.style.left = (inv.left + inv.offsetX) + 'px';
+      inv.el.style.top = (inv.top + inv.offsetY) + 'px';
+    });
 
     game.bullets.forEach(b => {
       b.y -= 0.5 * dt;
@@ -998,8 +1009,8 @@
       if (b.dead) return;
       game.invaders.forEach(inv => {
         if (!inv.alive) return;
-        const left = game.baseLeft + offset + inv.left;
-        const top = 16 + inv.top;
+        const left = game.baseLeft + inv.left + inv.offsetX;
+        const top = 16 + inv.top + inv.offsetY;
         if (b.x > left - 6 && b.x < left + inv.size + 6 && b.y > top - 6 && b.y < top + inv.size + 6){
           inv.alive = false;
           inv.el.classList.add('dead');
