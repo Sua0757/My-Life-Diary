@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>まなちゃんへ 🌿 お誕生日おめでとう</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Kosugi+Maru&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky: #AEE6F9;
+    --sky2: #E8F8EF;
+    --leaf: #6FA86B;
+    --leaf-dark: #4C7A49;
+    --leaf-light: #BFE3B8;
+    --flower: #FFB4C6;
+    --flower-dark: #F07B9A;
+    --sun: #FFD873;
+    --wood: #B98A5E;
+    --cream: #FFFBF0;
+    --ink: #4A4237;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%; width:100%;
+    font-family:'Kosugi Maru','Hiragino Maru Gothic ProN','Hiragino Sans',sans-serif;
+    color:var(--ink);
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+  }
+  .handwrite{ font-family:'Yomogi','Kosugi Maru',sans-serif; }
+  #app{ position:relative; width:100%; height:100%; }
+  .screen{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    overflow:hidden;
+  }
+  .screen.active{ display:flex; }
+
+  /* ---------- decorative shared bits ---------- */
+  .hill{
+    position:absolute; bottom:-10%; left:-10%; width:120%; height:40%;
+    background:var(--leaf-light);
+    border-radius:50% 50% 0 0 / 100% 100% 0 0;
+    z-index:1;
+  }
+  .hill2{
+    position:absolute; bottom:-14%; left:-5%; width:110%; height:30%;
+    background:var(--leaf);
+    border-radius:50% 50% 0 0 / 100% 100% 0 0;
+    z-index:2;
+  }
+  .cloud{
+    position:absolute; background:#fff; border-radius:50px;
+    opacity:.9; filter:drop-shadow(0 2px 2px rgba(0,0,0,.05));
+  }
+  .cloud:before,.cloud:after{content:"";position:absolute;background:#fff;border-radius:50%;}
+
+  /* ---------- START SCREEN ---------- */
+  #screen-start{ background:linear-gradient(180deg,var(--sky) 0%, var(--sky2) 70%); }
+  #screen-start .sun{
+    position:absolute; top:8%; right:12%; width:70px; height:70px; border-radius:50%;
+    background:radial-gradient(circle,#FFF2C2,var(--sun));
+    box-shadow:0 0 40px 10px rgba(255,216,115,.6);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+  .butterfly{ position:absolute; font-size:22px; animation: fly 7s ease-in-out infinite; z-index:3; }
+  @keyframes fly{
+    0%{ transform:translate(0,0) rotate(0deg); }
+    25%{ transform:translate(30px,-25px) rotate(8deg); }
+    50%{ transform:translate(60px,5px) rotate(-6deg); }
+    75%{ transform:translate(20px,-15px) rotate(6deg); }
+    100%{ transform:translate(0,0) rotate(0deg); }
+  }
+  .card{
+    position:relative; z-index:5;
+    background:rgba(255,255,255,.88);
+    border-radius:28px;
+    padding:36px 28px;
+    box-shadow:0 10px 30px rgba(76,122,73,.18);
+    max-width:340px;
+    margin:0 16px;
+  }
+  .title-main{
+    font-size:30px; line-height:1.4; color:var(--leaf-dark); margin:0 0 6px;
+  }
+  .title-sub{ font-size:15px; color:#7a9b76; margin:0 0 20px; }
+  button.big-btn{
+    font-family:'Kosugi Maru',sans-serif;
+    font-size:17px;
+    padding:14px 30px;
+    border:none;
+    border-radius:999px;
+    background:linear-gradient(135deg,var(--leaf),var(--leaf-dark));
+    color:#fff;
+    box-shadow:0 6px 0 #3c5f3a, 0 8px 16px rgba(0,0,0,.15);
+    cursor:pointer;
+    transition:transform .08s;
+  }
+  button.big-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 #3c5f3a; }
+  button.ghost-btn{
+    font-family:'Kosugi Maru',sans-serif;
+    font-size:14px;
+    padding:10px 20px;
+    border:2px solid var(--leaf);
+    border-radius:999px;
+    background:#fff;
+    color:var(--leaf-dark);
+    cursor:pointer;
+  }
+
+  /* ---------- FIREWORKS SCREEN ---------- */
+  #screen-fw{ background:radial-gradient(ellipse at 50% 0%, #27265a 0%, #121033 70%, #0a0920 100%); }
+  #fw-canvas{ position:absolute; inset:0; z-index:1; }
+  #fw-text{
+    position:relative; z-index:5; color:#fff;
+    text-shadow:0 0 18px rgba(255,255,255,.5);
+    pointer-events:none;
+  }
+  #fw-text .line1{ font-size:16px; letter-spacing:2px; color:#FFE6A7; margin-bottom:8px; opacity:0; animation: fadeIn 1s ease forwards .3s; }
+  #fw-text .line2{
+    font-size:32px; font-family:'Yomogi',sans-serif; line-height:1.5;
+    opacity:0; animation: fadeIn 1.2s ease forwards 1s;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(10px) scale(.95);} to{opacity:1; transform:translateY(0) scale(1);} }
+  #fw-controls{ position:absolute; bottom:28px; left:0; right:0; z-index:6; display:flex; flex-direction:column; gap:10px; align-items:center; }
+
+  /* ---------- GAME SCREEN ---------- */
+  #screen-game{ background:linear-gradient(180deg,#CDEFFB 0%, #F3FBEF 100%); justify-content:flex-start; padding-top:10px; }
+  #game-header{ position:relative; z-index:5; width:100%; max-width:380px; display:flex; justify-content:space-between; align-items:center; padding:0 14px; }
+  #game-title{ font-size:14px; color:var(--leaf-dark); }
+  #lives{ font-size:16px; }
+  #game-wrap{ position:relative; z-index:5; margin-top:6px; }
+  #game-canvas{ background:#eafff0; border-radius:16px; border:4px solid var(--leaf); box-shadow:0 8px 18px rgba(0,0,0,.12); touch-action:none; }
+  #game-msg{ font-size:13px; color:#5a7c57; margin-top:8px; max-width:320px; }
+  #game-controls{ display:flex; gap:14px; margin-top:12px; z-index:5; }
+  .ctrl-btn{
+    width:62px;height:62px; border-radius:50%; border:none;
+    background:#fff; box-shadow:0 4px 10px rgba(0,0,0,.15);
+    font-size:24px; display:flex; align-items:center; justify-content:center;
+  }
+  .ctrl-btn:active{ transform:scale(.92); }
+  #clear-overlay, #start-game-overlay{
+    position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(255,255,255,.85); border-radius:16px; gap:14px; text-align:center; padding:16px;
+  }
+  #clear-overlay{ display:none; }
+  #clear-overlay.show{ display:flex; }
+  #clear-overlay h2{ color:var(--flower-dark); font-size:26px; margin:0; font-family:'Yomogi',sans-serif; }
+
+  /* ---------- COUPON SCREEN ---------- */
+  #screen-coupon{ background:linear-gradient(180deg,#FFF7E8 0%, #FFEFEF 100%); }
+  #coupon-wrap{ z-index:5; width:100%; max-width:380px; padding:14px; overflow-y:auto; max-height:100%; }
+  #coupon-wrap h2{ color:var(--flower-dark); font-family:'Yomogi',sans-serif; font-size:24px; margin:4px 0 16px; }
+  .ticket{
+    position:relative;
+    background:var(--cream);
+    border-radius:18px;
+    margin:0 auto 20px;
+    padding:20px 16px 16px;
+    border:2px dashed var(--wood);
+    box-shadow:0 6px 14px rgba(0,0,0,.1);
+    max-width:300px;
+  }
+  .ticket .stamp{
+    position:absolute; left:14px; top:14px;
+    color:var(--flower-dark); border:3px solid var(--flower-dark); border-radius:50%;
+    width:70px;height:70px; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:bold; transform:rotate(-18deg); opacity:0;
+    font-family:'Kosugi Maru',sans-serif; text-align:center; line-height:1.2;
+  }
+  .ticket.used .stamp{ opacity:.9; }
+  .ticket.used{ filter:grayscale(.3); }
+  .ticket .emoji{ font-size:34px; }
+  .ticket .label{ font-size:17px; margin:6px 0 4px; color:var(--ink); font-weight:bold; }
+  .ticket .desc{ font-size:12px; color:#8a7a60; margin-bottom:10px; }
+  .use-btn{
+    font-family:'Kosugi Maru',sans-serif;
+    border:none; border-radius:999px; padding:9px 22px; font-size:14px;
+    background:var(--flower-dark); color:#fff; cursor:pointer;
+  }
+  .use-btn:disabled{ background:#ccc; }
+
+  /* ---------- MESSAGE SCREEN ---------- */
+  #screen-msg{ background:linear-gradient(180deg,#FFE3EE 0%, #E7F7E3 100%); }
+  .petal{ position:absolute; top:-10%; font-size:18px; will-change:transform; animation:fall linear infinite; z-index:2; }
+  @keyframes fall{
+    from{ transform:translateY(0) rotate(0deg); }
+    to{ transform:translateY(115vh) rotate(360deg); }
+  }
+  #msg-card{ z-index:5; }
+  #msg-card .line1{ font-size:14px; color:#c9789a; letter-spacing:2px; margin-bottom:10px; }
+  #msg-card .line2{
+    font-family:'Yomogi',sans-serif; font-size:26px; line-height:1.7; color:#7a4a5a;
+    white-space:pre-line;
+  }
+  #msg-card .sign{ margin-top:18px; font-size:13px; color:#a98; }
+  .nav-dot{ position:fixed; top:10px; right:10px; z-index:50; font-size:11px; color:#999; background:rgba(255,255,255,.6); padding:3px 8px; border-radius:10px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- START -->
+  <section id="screen-start" class="screen active">
+    <div class="sun"></div>
+    <div class="cloud" style="width:70px;height:26px;top:14%;left:8%;"></div>
+    <div class="cloud" style="width:50px;height:20px;top:22%;left:65%;"></div>
+    <span class="butterfly" style="top:30%; left:15%; animation-delay:.2s;">🦋</span>
+    <span class="butterfly" style="top:55%; left:70%; animation-delay:1.5s;">🦋</span>
+    <div class="hill"></div>
+    <div class="hill2"></div>
+    <div class="card">
+      <p class="title-sub">🌿 まなちゃんへ 🌿</p>
+      <h1 class="title-main handwrite">お誕生日の<br>ひみつのアプリ</h1>
+      <p class="title-sub">たっぷり楽しんでね</p>
+      <button class="big-btn" id="btn-start">はじめる 🌷</button>
+    </div>
+  </section>
+
+  <!-- FIREWORKS -->
+  <section id="screen-fw" class="screen">
+    <canvas id="fw-canvas"></canvas>
+    <div id="fw-text">
+      <p class="line1">H A P P Y   B I R T H D A Y</p>
+      <p class="line2 handwrite">まなちゃん<br>お誕生日おめでとう 🎉</p>
+    </div>
+    <div id="fw-controls">
+      <button class="ghost-btn" id="btn-replay-song" style="background:rgba(255,255,255,.15); color:#fff; border-color:#fff;">🎵 もう一度うたを聴く</button>
+      <button class="big-btn" id="btn-to-game">つぎへ：ゲームに挑戦！ 🎮</button>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="screen">
+    <div id="game-header">
+      <span id="game-title">🐝 虫さんたいじゲーム 🐝</span>
+      <span id="lives">♥♥♥</span>
+    </div>
+    <div id="game-wrap">
+      <canvas id="game-canvas" width="300" height="400"></canvas>
+      <div id="start-game-overlay">
+        <p class="handwrite" style="font-size:20px;color:var(--leaf-dark);">みつばちたちを<br>やっつけよう！</p>
+        <p style="font-size:12px;color:#777;">◀▶で うごく ／ 🔫で たまを うつ<br>ぜんぶたおしたらクリア！</p>
+        <button class="big-btn" id="btn-game-start">スタート！</button>
+      </div>
+      <div id="clear-overlay">
+        <h2 class="handwrite">🎉 CLEAR！🎉</h2>
+        <p style="font-size:13px;color:#777;">よくがんばったね！</p>
+        <button class="big-btn" id="btn-to-coupon">クーポンを見る 🎁</button>
+      </div>
+    </div>
+    <p id="game-msg">ぜんぶの虫をたおすとクリアだよ</p>
+    <div id="game-controls">
+      <button class="ctrl-btn" id="btn-left">◀</button>
+      <button class="ctrl-btn" id="btn-shoot">🔫</button>
+      <button class="ctrl-btn" id="btn-right">▶</button>
+    </div>
+  </section>
+
+  <!-- COUPON -->
+  <section id="screen-coupon" class="screen">
+    <div id="coupon-wrap">
+      <h2>🎁 誕生日クーポン 🎁</h2>
+
+      <div class="ticket" id="ticket-meal">
+        <div class="stamp">つかい<br>ました</div>
+        <div class="emoji">🍚</div>
+        <div class="label">ご飯おごるよ券</div>
+        <div class="desc">いつでも好きなときに使ってね</div>
+        <button class="use-btn" data-ticket="meal">つかう</button>
+      </div>
+
+      <div class="ticket" id="ticket-gift">
+        <div class="stamp">つかい<br>ました</div>
+        <div class="emoji">🎀</div>
+        <div class="label">プレゼントあげるよ券</div>
+        <div class="desc">好きなものリクエストしてね</div>
+        <button class="use-btn" data-ticket="gift">つかう</button>
+      </div>
+
+      <div style="text-align:center;">
+        <button class="big-btn" id="btn-to-msg">つぎへ 💌</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MESSAGE -->
+  <section id="screen-msg" class="screen">
+    <div id="msg-card" class="card">
+      <p class="line1">🌸 FROM 🌸</p>
+      <p class="line2">お誕生日おめでとう！
+熊本に帰らないでね！</p>
+      <p class="sign">いつも応援してるよ 🌿</p>
+    </div>
+    <button class="ghost-btn" id="btn-restart" style="position:absolute; bottom:18px;">🔁 はじめから見る</button>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- state / navigation ---------------- */
+  var SCREENS = ["start","fw","game","coupon","msg"];
+  var state = JSON.parse(localStorage.getItem("mana-bday-state") || "{}");
+  state.screen = state.screen || "start";
+  state.gameCleared = !!state.gameCleared;
+  state.coupons = state.coupons || { meal:false, gift:false };
+
+  function saveState(){
+    localStorage.setItem("mana-bday-state", JSON.stringify(state));
+  }
+
+  function showScreen(name){
+    SCREENS.forEach(function(s){
+      document.getElementById("screen-"+s).classList.toggle("active", s === name);
+    });
+    state.screen = name;
+    saveState();
+    if(name === "fw"){ onEnterFireworks(); }
+    if(name === "game"){ onEnterGame(); }
+    if(name === "coupon"){ onEnterCoupon(); }
+    if(name === "msg"){ onEnterMessage(); }
+  }
+
+  /* restore last screen on load (but always start fresh visuals) */
+  window.addEventListener("load", function(){
+    if(state.screen && state.screen !== "start"){
+      showScreen(state.screen);
+    }
+  });
+
+  /* ---------------- audio: Happy Birthday melody (synth, no external files) ---------------- */
+  var audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+    } else if(audioCtx.state === "suspended"){
+      audioCtx.resume();
+    }
+  }
+
+  var NOTE = {
+    C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+    C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99
+  };
+  var MELODY = [
+    ["G4",.22],["G4",.22],["A4",.42],["G4",.42],["C5",.42],["B4",.8],
+    ["G4",.22],["G4",.22],["A4",.42],["G4",.42],["D5",.42],["C5",.8],
+    ["G4",.22],["G4",.22],["G5",.42],["E5",.42],["C5",.42],["B4",.42],["A4",.8],
+    ["F5",.22],["F5",.22],["E5",.42],["C5",.42],["D5",.42],["C5",.9]
+  ];
+
+  function playNote(freq, startTime, duration){
+    if(!audioCtx) return;
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    var attack = 0.03;
+    var release = Math.min(0.18, duration*0.4);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.22, startTime + attack);
+    gain.gain.setValueAtTime(0.22, startTime + duration - release);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  }
+
+  function playMelody(){
+    ensureAudio();
+    if(!audioCtx) return;
+    var t = audioCtx.currentTime + 0.05;
+    MELODY.forEach(function(n){
+      playNote(NOTE[n[0]], t, n[1]*0.92);
+      t += n[1];
+    });
+  }
+
+  var fwSongPlayed = false;
+  function onEnterFireworks(){
+    startFireworks();
+    if(!fwSongPlayed){
+      fwSongPlayed = true;
+      playMelody();
+    }
+  }
+
+  /* ---------------- fireworks canvas ---------------- */
+  var fwCanvas = document.getElementById("fw-canvas");
+  var fwCtx = fwCanvas.getContext("2d");
+  var fwParticles = [];
+  var fwRunning = false;
+  var fwLaunchTimer = 0;
+
+  function resizeFw(){
+    fwCanvas.width = fwCanvas.offsetWidth;
+    fwCanvas.height = fwCanvas.offsetHeight;
+  }
+
+  function randColor(){
+    var colors = ["#FF8FA3","#FFD873","#8FD9C4","#9AD1FF","#FFB4F0","#C9FF8F"];
+    return colors[Math.floor(Math.random()*colors.length)];
+  }
+
+  function launchFirework(){
+    var x = 30 + Math.random()*(fwCanvas.width-60);
+    var topY = fwCanvas.height*0.15 + Math.random()*fwCanvas.height*0.3;
+    var color = randColor();
+    var count = 28 + Math.floor(Math.random()*14);
+    for(var i=0;i<count;i++){
+      var angle = (Math.PI*2*i)/count;
+      var speed = 1.4 + Math.random()*1.6;
+      fwParticles.push({
+        x:x, y:topY,
+        vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed,
+        life:1, decay:0.012+Math.random()*0.012,
+        color:color
+      });
+    }
+  }
+
+  function stepFw(){
+    if(!fwRunning) return;
+    fwCtx.fillStyle = "rgba(10,9,32,0.22)";
+    fwCtx.fillRect(0,0,fwCanvas.width,fwCanvas.height);
+
+    fwLaunchTimer--;
+    if(fwLaunchTimer <= 0){
+      launchFirework();
+      fwLaunchTimer = 38 + Math.random()*35;
+    }
+
+    for(var i=fwParticles.length-1;i>=0;i--){
+      var p = fwParticles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.025; p.life -= p.decay;
+      if(p.life <= 0){ fwParticles.splice(i,1); continue; }
+      fwCtx.globalAlpha = Math.max(p.life,0);
+      fwCtx.fillStyle = p.color;
+      fwCtx.beginPath();
+      fwCtx.arc(p.x,p.y,2.2,0,Math.PI*2);
+      fwCtx.fill();
+    }
+    fwCtx.globalAlpha = 1;
+    requestAnimationFrame(stepFw);
+  }
+
+  function startFireworks(){
+    resizeFw();
+    if(fwRunning) return;
+    fwRunning = true;
+    fwCtx.fillStyle = "#0a0920";
+    fwCtx.fillRect(0,0,fwCanvas.width,fwCanvas.height);
+    fwLaunchTimer = 1;
+    requestAnimationFrame(stepFw);
+  }
+  window.addEventListener("resize", resizeFw);
+
+  /* ---------------- space invaders ("bug hunt") ---------------- */
+  var gcanvas = document.getElementById("game-canvas");
+  var gctx = gcanvas.getContext("2d");
+  var GW = gcanvas.width, GH = gcanvas.height;
+
+  var player, bugs, bullets, enemyBullets, lives, dir, moveTimer, gameRunning, gameLoopId;
+
+  function initGame(){
+    player = { x:GW/2-14, y:GH-34, w:28, h:16, speed:5 };
+    bugs = [];
+    var rows=3, cols=6, startX=22, startY=34, gapX=42, gapY=36;
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        bugs.push({ x:startX+c*gapX, y:startY+r*gapY, alive:true, r:12,
+          color:["#F2C230","#F2994A","#F28CAE","#8CC7F2"][r%4] });
+      }
+    }
+    bullets = [];
+    enemyBullets = [];
+    lives = 3;
+    dir = 1;
+    moveTimer = 0;
+    document.getElementById("lives").textContent = "♥".repeat(lives);
+  }
+
+  function aliveBugs(){ return bugs.filter(function(b){return b.alive;}); }
+
+  function drawBug(b){
+    gctx.save();
+    gctx.translate(b.x,b.y);
+    gctx.fillStyle = b.color;
+    gctx.beginPath();
+    gctx.ellipse(0,0,b.r,b.r*0.8,0,0,Math.PI*2);
+    gctx.fill();
+    gctx.strokeStyle = "#5a4a2a";
+    gctx.lineWidth = 1.5;
+    gctx.beginPath(); gctx.moveTo(-6,-10); gctx.lineTo(-10,-16); gctx.stroke();
+    gctx.beginPath(); gctx.moveTo(6,-10); gctx.lineTo(10,-16); gctx.stroke();
+    gctx.fillStyle="#333";
+    gctx.beginPath(); gctx.arc(-4,-2,1.6,0,Math.PI*2); gctx.fill();
+    gctx.beginPath(); gctx.arc(4,-2,1.6,0,Math.PI*2); gctx.fill();
+    gctx.restore();
+  }
+
+  function drawPlayer(){
+    gctx.save();
+    gctx.translate(player.x+player.w/2, player.y+player.h/2);
+    gctx.fillStyle = "#6FA86B";
+    gctx.beginPath();
+    gctx.moveTo(0,-player.h/2);
+    gctx.quadraticCurveTo(player.w/2, player.h/2, 0, player.h/2+4);
+    gctx.quadraticCurveTo(-player.w/2, player.h/2, 0, -player.h/2);
+    gctx.fill();
+    gctx.fillStyle = "#4C7A49";
+    gctx.beginPath(); gctx.arc(0,0,3,0,Math.PI*2); gctx.fill();
+    gctx.restore();
+  }
+
+  var keys = {};
+  window.addEventListener("keydown", function(e){
+    if(["ArrowLeft","ArrowRight"," ","Spacebar"].indexOf(e.key)>-1) e.preventDefault();
+    keys[e.key]=true;
+    if(e.key===" "||e.key==="Spacebar") shoot();
+  });
+  window.addEventListener("keyup", function(e){ keys[e.key]=false; });
+
+  function shoot(){
+    if(!gameRunning) return;
+    if(bullets.length>4) return;
+    bullets.push({x:player.x+player.w/2-2, y:player.y-6, w:4, h:10});
+  }
+
+  function bindHold(id, fn){
+    var el = document.getElementById(id);
+    var active=false;
+    function on(e){ e.preventDefault(); active=true; }
+    function off(e){ active=false; }
+    el.addEventListener("touchstart", on, {passive:false});
+    el.addEventListener("touchend", off);
+    el.addEventListener("mousedown", on);
+    el.addEventListener("mouseup", off);
+    el.addEventListener("mouseleave", off);
+    setInterval(function(){ if(active) fn(); }, 16);
+  }
+  bindHold("btn-left", function(){ keys["ArrowLeft"]=true; setTimeout(function(){keys["ArrowLeft"]=false;},50); });
+  bindHold("btn-right", function(){ keys["ArrowRight"]=true; setTimeout(function(){keys["ArrowRight"]=false;},50); });
+  document.getElementById("btn-shoot").addEventListener("click", shoot);
+  document.getElementById("btn-shoot").addEventListener("touchstart", function(e){ e.preventDefault(); shoot(); });
+
+  function updateGame(){
+    if(keys["ArrowLeft"]) player.x -= player.speed;
+    if(keys["ArrowRight"]) player.x += player.speed;
+    player.x = Math.max(4, Math.min(GW-player.w-4, player.x));
+
+    moveTimer++;
+    var speedTick = Math.max(14, 34 - (36-aliveBugs().length));
+    if(moveTimer >= speedTick){
+      moveTimer = 0;
+      var hitEdge = false;
+      aliveBugs().forEach(function(b){
+        b.x += dir*8;
+        if(b.x>GW-18 || b.x<18) hitEdge = true;
+      });
+      if(hitEdge){
+        dir *= -1;
+        bugs.forEach(function(b){ b.y += 14; });
+      }
+    }
+
+    if(Math.random()<0.007 && aliveBugs().length){
+      var shooters = aliveBugs();
+      var sb = shooters[Math.floor(Math.random()*shooters.length)];
+      enemyBullets.push({x:sb.x-2, y:sb.y+10, w:4, h:9});
+    }
+
+    bullets.forEach(function(b){ b.y -= 6; });
+    bullets = bullets.filter(function(b){ return b.y > -20; });
+
+    enemyBullets.forEach(function(b){ b.y += 3.2; });
+    enemyBullets = enemyBullets.filter(function(b){ return b.y < GH+20; });
+
+    bullets.forEach(function(bu){
+      bugs.forEach(function(b){
+        if(!b.alive) return;
+        if(Math.abs(bu.x-b.x) < b.r+4 && Math.abs(bu.y-b.y) < b.r+4){
+          b.alive = false;
+          bu.y = -999;
+        }
+      });
+    });
+
+    enemyBullets.forEach(function(eb){
+      if(eb.y > -500 && eb.x > player.x-6 && eb.x < player.x+player.w+6 && eb.y > player.y-6 && eb.y < player.y+player.h){
+        eb.y = 9999;
+        lives--;
+        document.getElementById("lives").textContent = "♥".repeat(Math.max(lives,0));
+        if(lives<=0){ initGame(); }
+      }
+    });
+    enemyBullets = enemyBullets.filter(function(b){ return b.y < 9000; });
+
+    if(aliveBugs().length === 0){
+      endGame();
+    }
+  }
+
+  function renderGame(){
+    gctx.clearRect(0,0,GW,GH);
+    var grad = gctx.createLinearGradient(0,0,0,GH);
+    grad.addColorStop(0,"#eafff0"); grad.addColorStop(1,"#dff3ff");
+    gctx.fillStyle = grad;
+    gctx.fillRect(0,0,GW,GH);
+
+    bugs.forEach(function(b){ if(b.alive) drawBug(b); });
+    gctx.fillStyle = "#FFD873";
+    bullets.forEach(function(b){ gctx.fillRect(b.x,b.y,b.w,b.h); });
+    gctx.fillStyle = "#F07B9A";
+    enemyBullets.forEach(function(b){ gctx.fillRect(b.x,b.y,b.w,b.h); });
+    drawPlayer();
+  }
+
+  function gameLoop(){
+    if(!gameRunning) return;
+    updateGame();
+    renderGame();
+    gameLoopId = requestAnimationFrame(gameLoop);
+  }
+
+  function endGame(){
+    gameRunning = false;
+    cancelAnimationFrame(gameLoopId);
+    document.getElementById("clear-overlay").classList.add("show");
+    state.gameCleared = true;
+    saveState();
+  }
+
+  function onEnterGame(){
+    initGame();
+    renderGame();
+    document.getElementById("clear-overlay").classList.remove("show");
+    if(state.gameCleared){
+      document.getElementById("start-game-overlay").style.display = "none";
+      document.getElementById("clear-overlay").classList.add("show");
+    } else {
+      document.getElementById("start-game-overlay").style.display = "flex";
+    }
+  }
+
+  document.getElementById("btn-game-start").addEventListener("click", function(){
+    document.getElementById("start-game-overlay").style.display = "none";
+    gameRunning = true;
+    gameLoop();
+  });
+
+  /* ---------------- coupons ---------------- */
+  function onEnterCoupon(){
+    ["meal","gift"].forEach(function(key){
+      var ticket = document.getElementById("ticket-"+key);
+      var btn = ticket.querySelector(".use-btn");
+      if(state.coupons[key]){
+        ticket.classList.add("used");
+        btn.disabled = true;
+        btn.textContent = "つかいました";
+      } else {
+        ticket.classList.remove("used");
+        btn.disabled = false;
+        btn.textContent = "つかう";
+      }
+    });
+  }
+
+  document.querySelectorAll(".use-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var key = btn.getAttribute("data-ticket");
+      state.coupons[key] = true;
+      saveState();
+      onEnterCoupon();
+    });
+  });
+
+  /* ---------------- message screen petals ---------------- */
+  var petalsSpawned = false;
+  function onEnterMessage(){
+    if(petalsSpawned) return;
+    petalsSpawned = true;
+    var emojis = ["🌸","🍃","🌼","🦋"];
+    for(var i=0;i<22;i++){
+      var span = document.createElement("span");
+      span.className = "petal";
+      span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      span.style.left = (Math.random()*100)+"vw";
+      span.style.fontSize = (14+Math.random()*14)+"px";
+      span.style.animationDuration = (6+Math.random()*6)+"s";
+      span.style.animationDelay = (Math.random()*6)+"s";
+      document.getElementById("screen-msg").appendChild(span);
+    }
+  }
+
+  /* ---------------- buttons / navigation wiring ---------------- */
+  document.getElementById("btn-start").addEventListener("click", function(){
+    ensureAudio();
+    showScreen("fw");
+  });
+  document.getElementById("btn-replay-song").addEventListener("click", playMelody);
+  document.getElementById("btn-to-game").addEventListener("click", function(){ showScreen("game"); });
+  document.getElementById("btn-to-coupon").addEventListener("click", function(){ showScreen("coupon"); });
+  document.getElementById("btn-to-msg").addEventListener("click", function(){ showScreen("msg"); });
+  document.getElementById("btn-restart").addEventListener("click", function(){
+    state = { screen:"start", gameCleared:false, coupons:{meal:false,gift:false} };
+    saveState();
+    location.reload();
+  });
+
+})();
+</script>
+</body>
+</html>
