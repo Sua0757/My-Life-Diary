@@ -2684,8 +2684,15 @@ function weeklyFormView(id){
   '</div>'+
   '<div class="section-label">全体プレビュー</div>'+
   '<div class="summary-box" id="wkprev_'+id+'">'+esc(weeklyPreviewText(id))+'</div>'+
+  '<div class="btn-row" style="margin-top:8px"><button class="btn subtle block" onclick="copyWeeklyPreview(\''+id+'\')">📋 全体プレビューをコピー</button></div>'+
   '<p class="wk-note">'+esc(WK_NOTE)+'</p>'+
   '<div class="btn-row" style="margin-top:12px"><button class="btn danger block" onclick="deleteWeekly(\''+id+'\')">削除</button></div>';
+}
+function copyWeeklyPreview(id){
+  const t=weeklyPreviewText(id);
+  const done=()=>toast('全体プレビューをコピーしました');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(()=>{fallbackCopy(t);done();});}
+  else{fallbackCopy(t);done();}
 }
 
 /* ============================================================
