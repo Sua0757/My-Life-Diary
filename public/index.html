@@ -2055,12 +2055,25 @@ function ensureSheet(date){
       longGoal:c.longGoal||'',monthGoal:c.monthGoal||'',todayGoal:'',sleep:'',wake:'',startW:c.startW||'',endW:c.endW||'',
       slots:{},slotsRed:{},slotABC:{},slotStrike:{},todo1:{},todo2:{},metrics:{},metricCarried:false,metricGoals:Object.assign({},c.metricGoals||{}),
       evCount:'',evCost:'',evLine:'',
-      mood:0,ach10:0,apoList:'',score:'',scoreWhy:'',diary:''
+      mood:0,ach10:0,apoList:apoListForDate(date),score:'',scoreWhy:'',diary:''
     };
     applyCarriedMetrics(date); /* その日の昼12時を過ぎていれば、前日までの結果を引き継ぐ */
     save();
   }
   return state.schedules[date];
+}
+/* アポ記録の「アポ日」がその日と同じ記録から、「名前（仕事、年齢、年収）」の形で
+   1人1行のリストを作る（アポが複数いれば下に連なる）。手修正できるよう、
+   呼び出し側（シート新規作成時・↺ボタン）でしか使わず、自動で上書きし続けはしない */
+function apoListForDate(date){
+  return state.apos.filter(a=>a.apoDate===date).slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0))
+    .map(a=>{
+      const job=joinVal(a.jobSel,a.job);
+      const age=a.age!==''?grownNumber(a.age,a.ageYear):'';
+      const income=joinVal(a.incomeSel,a.income);
+      const parts=[job,age,income].filter(Boolean);
+      return (a.name||'（名前未入力）')+(parts.length?'（'+parts.join('、')+'）':'');
+    }).join('\n');
 }
 /* その日の12:00を過ぎたか（端末の時計基準） */
 function noonPassed(date){ if(!date)return false; return Date.now()>=new Date(date+'T12:00:00').getTime(); }
@@ -2191,7 +2204,7 @@ function sheetView(date){
   const tpl=state.scheduleTemplate;
   const abc=s.slotABC||{};
   const mgoals=s.metricGoals||{};
-  const F=(label,inner)=>'<div class="field"><label>'+label+'</label>'+inner+'</div>';
+  const F=(label,inner,auto)=>'<div class="field"><label>'+label+(auto?' <span class="auto">'+auto+'</span>':'')+'</label>'+inner+'</div>';
   return '<button class="back" onclick="subView=null;render()">← 日付リストに戻る</button>'+
   '<div class="big-title-preview">'+fmtDate(date)+' のスケジュールシート</div>'+
   '<div class="btn-row"><button class="btn ghost block" onclick="subView={type:\'sheetA4\',date:\''+date+'\'};render();window.scrollTo(0,0)">🖨 A4サイズでプレビュー</button></div>'+
@@ -2237,7 +2250,9 @@ function sheetView(date){
     F('朝の気分（1〜10）',scaleBtns(date,'mood',10,s.mood))+
     F('今日の達成度（1〜10）',scaleBtns(date,'ach10',10,s.ach10))+
     F('達成度の結果の原因（端的に言語化）','<div class="voice-wrap"><textarea id="sh_why" oninput="setSheet(\''+date+'\',\'scoreWhy\',this.value)">'+esc(s.scoreWhy)+'</textarea>'+micBtn('sh_why')+'</div>')+
-    F(esc(tpl.apoListTitle||'今日のアポした人リスト（箇条書き）'),'<div class="voice-wrap"><textarea id="sh_apo" oninput="setSheet(\''+date+'\',\'apoList\',this.value)">'+esc(s.apoList)+'</textarea>'+micBtn('sh_apo')+'</div>')+
+    F(esc(tpl.apoListTitle||'今日のアポした人リスト（箇条書き）'),'<div class="voice-wrap"><textarea id="sh_apo" oninput="setSheet(\''+date+'\',\'apoList\',this.value)">'+esc(s.apoList)+'</textarea>'+micBtn('sh_apo')+'</div>',
+      'アポ記録の「アポ日」が同じ日のものを自動で反映（名前（仕事、年齢、年収））。手修正もできます')+
+    '<div class="btn-row"><button class="btn subtle small" onclick="setSheet(\''+date+'\',\'apoList\',apoListForDate(\''+date+'\'));render()">↺ 今日のアポ記録を反映</button></div>'+
     F('３行日報（気付きなど）　→何をやったのか？結果は？結果の原因は？','<div class="voice-wrap"><textarea id="sh_di" class="red" oninput="setSheet(\''+date+'\',\'diary\',this.value)">'+esc(s.diary)+'</textarea>'+micBtn('sh_di')+'</div>')+
     (tpl.customFields||[]).map((cf,i)=>F(esc(cf),'<div class="voice-wrap"><textarea id="sh_cf'+i+'" oninput="setSheetCustom(\''+date+'\','+i+',this.value)">'+esc((s.custom||{})[cf]||'')+'</textarea>'+micBtn('sh_cf'+i)+'</div>')).join('')+
   '</div>'+
